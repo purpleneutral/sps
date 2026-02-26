@@ -1,0 +1,15 @@
+[package]
+name = "scanner-bestpractices"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Best practices checks for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

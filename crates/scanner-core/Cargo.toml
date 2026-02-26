@@ -1,0 +1,13 @@
+[package]
+name = "scanner-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core types, scoring engine, and report generation for the Seglamater Privacy Scanner"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+colored = { workspace = true }

@@ -1,0 +1,135 @@
+pub mod blocklists;
+pub mod fingerprint;
+pub mod parser;
+pub mod resources;
+
+use scanner_core::check::{CategoryResult, CheckResult};
+use scanner_core::spec::Category;
+
+const CAT: Category = Category::TrackingThirdParties;
+
+/// Run all tracking and third-party checks.
+///
+/// `domain` is the first-party domain being scanned.
+/// `html` is the HTML body of the page.
+/// `page_url` is the full URL that was fetched.
+pub fn check_tracking(domain: &str, html: &str, page_url: &str) -> CategoryResult {
+    let external_resources = parser::extract_external_resources(html, page_url, domain);
+
+    let analytics = resources::find_analytics(&external_resources);
+    let trackers = resources::find_trackers(&external_resources);
+    let third_party_cdns = resources::find_third_party_cdns(&external_resources, domain);
+    let has_mixed_content = resources::has_mixed_content(&external_resources);
+    let fingerprinting = fingerprint::detect_fingerprinting(html);
+
+    let mut checks = Vec::new();
+
+    // No third-party analytics (10 pts)
+    if analytics.is_empty() {
+        checks.push(CheckResult::pass(
+            CAT,
+            "no_analytics",
+            "No third-party analytics scripts",
+            10,
+            None,
+        ));
+    } else {
+        checks.push(CheckResult::fail(
+            CAT,
+            "no_analytics",
+            "No third-party analytics scripts",
+            10,
+            Some(format!(
+                "{} analytics script(s) detected: {}",
+                analytics.len(),
+                analytics.join(", ")
+            )),
+        ));
+    }
+
+    // No third-party advertising/tracking scripts (10 pts)
+    if trackers.is_empty() {
+        checks.push(CheckResult::pass(
+            CAT,
+            "no_trackers",
+            "No third-party advertising/tracking scripts",
+            10,
+            None,
+        ));
+    } else {
+        checks.push(CheckResult::fail(
+            CAT,
+            "no_trackers",
+            "No third-party advertising/tracking scripts",
+            10,
+            Some(format!(
+                "{} tracking script(s) detected: {}",
+                trackers.len(),
+                trackers.join(", ")
+            )),
+        ));
+    }
+
+    // No fingerprinting patterns (5 pts)
+    if fingerprinting.is_empty() {
+        checks.push(CheckResult::pass(
+            CAT,
+            "no_fingerprinting",
+            "No known fingerprinting patterns detected",
+            5,
+            None,
+        ));
+    } else {
+        checks.push(CheckResult::fail(
+            CAT,
+            "no_fingerprinting",
+            "No known fingerprinting patterns detected",
+            5,
+            Some(format!("Detected: {}", fingerprinting.join(", "))),
+        ));
+    }
+
+    // No third-party CDNs (3 pts)
+    if third_party_cdns.is_empty() {
+        checks.push(CheckResult::pass(
+            CAT,
+            "no_third_party_cdns",
+            "No third-party fonts/CDNs (bonus)",
+            3,
+            Some("All resources served from first-party domain".into()),
+        ));
+    } else {
+        checks.push(CheckResult::fail(
+            CAT,
+            "no_third_party_cdns",
+            "No third-party fonts/CDNs (bonus)",
+            3,
+            Some(format!(
+                "{} third-party CDN resource(s): {}",
+                third_party_cdns.len(),
+                third_party_cdns.join(", ")
+            )),
+        ));
+    }
+
+    // All external resources over HTTPS (2 pts)
+    if !has_mixed_content {
+        checks.push(CheckResult::pass(
+            CAT,
+            "all_https",
+            "All external resources loaded over HTTPS",
+            2,
+            None,
+        ));
+    } else {
+        checks.push(CheckResult::fail(
+            CAT,
+            "all_https",
+            "All external resources loaded over HTTPS",
+            2,
+            Some("Mixed content detected (HTTP resources on HTTPS page)".into()),
+        ));
+    }
+
+    CategoryResult::new(CAT, checks)
+}

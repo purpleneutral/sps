@@ -1,0 +1,13 @@
+[package]
+name = "scanner-cookies"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cookie behavior analysis for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }

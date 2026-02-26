@@ -1,0 +1,15 @@
+[package]
+name = "scanner-tracking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Third-party tracking and fingerprint detection for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+reqwest = { workspace = true }
+scraper = { workspace = true }
+url = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

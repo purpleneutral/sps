@@ -1,0 +1,16 @@
+[package]
+name = "scanner-transport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TLS and HSTS checks for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+tokio = { workspace = true }
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+webpki-roots = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

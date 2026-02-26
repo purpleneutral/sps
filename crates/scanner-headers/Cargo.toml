@@ -1,0 +1,12 @@
+[package]
+name = "scanner-headers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "HTTP security header checks for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

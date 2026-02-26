@@ -1,0 +1,15 @@
+[package]
+name = "scanner-dns"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "DNS and email security checks for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+hickory-resolver = { workspace = true }
+hickory-client = { workspace = true }
+hickory-proto = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,74 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/scanner-core",
+    "crates/scanner-transport",
+    "crates/scanner-headers",
+    "crates/scanner-tracking",
+    "crates/scanner-cookies",
+    "crates/scanner-dns",
+    "crates/scanner-bestpractices",
+    "crates/scanner-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/purpleneutral/seglamater-scan"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "cookies", "gzip", "brotli", "charset", "http2"] }
+
+# TLS
+rustls = "0.23"
+tokio-rustls = "0.26"
+webpki-roots = "0.26"
+
+# DNS
+hickory-resolver = "0.25"
+hickory-client = "0.25"
+hickory-proto = "0.25"
+
+# HTML parsing
+scraper = "0.22"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# URL handling
+url = "2"
+
+# Regex
+regex = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Colored terminal output
+colored = "3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Internal crates
+scanner-core = { path = "crates/scanner-core" }
+scanner-transport = { path = "crates/scanner-transport" }
+scanner-headers = { path = "crates/scanner-headers" }
+scanner-tracking = { path = "crates/scanner-tracking" }
+scanner-cookies = { path = "crates/scanner-cookies" }
+scanner-dns = { path = "crates/scanner-dns" }
+scanner-bestpractices = { path = "crates/scanner-bestpractices" }
