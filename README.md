@@ -12,6 +12,8 @@ Available as a CLI tool for one-off scans and an HTTP API server with badge gene
 
 ### Install from source
 
+Requires **Rust 1.85+** (edition 2024).
+
 ```bash
 git clone https://github.com/purpleneutral/sps.git
 cd sps
