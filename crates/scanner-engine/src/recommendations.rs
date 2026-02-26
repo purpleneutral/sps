@@ -1,7 +1,12 @@
 use scanner_core::check::CategoryResult;
 
 /// Generate actionable recommendations based on scan results.
-pub fn generate(categories: &[CategoryResult]) -> Vec<String> {
+/// Public re-export for consumers that need just the recommendations.
+pub fn generate_recommendations(categories: &[CategoryResult]) -> Vec<String> {
+    generate(categories)
+}
+
+pub(crate) fn generate(categories: &[CategoryResult]) -> Vec<String> {
     let mut recs = Vec::new();
 
     for cat in categories {
@@ -90,10 +95,10 @@ pub fn generate(categories: &[CategoryResult]) -> Vec<String> {
                 "cookies_secure" => {
                     Some("Add the Secure flag to all cookies".to_string())
                 }
-                "cookies_httponly" => {
-                    Some("Add the HttpOnly flag to all cookies that don't need JavaScript access"
-                        .to_string())
-                }
+                "cookies_httponly" => Some(
+                    "Add the HttpOnly flag to all cookies that don't need JavaScript access"
+                        .to_string(),
+                ),
                 "cookies_samesite" => Some(
                     "Add SameSite=Lax or SameSite=Strict to all cookies".to_string(),
                 ),

@@ -1,0 +1,14 @@
+services:
+  scanner:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - scanner-data:/data
+    environment:
+      - DATABASE_URL=sqlite:///data/scanner.db
+      - RUST_LOG=info
+    restart: unless-stopped
+
+volumes:
+  scanner-data:

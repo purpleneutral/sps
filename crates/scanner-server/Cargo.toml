@@ -1,0 +1,26 @@
+[package]
+name = "scanner-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "HTTP API server and badge generator for the Seglamater Privacy Scanner"
+
+[features]
+default = ["sqlite"]
+sqlite = ["sqlx/sqlite"]
+postgres = ["sqlx/postgres"]
+
+[dependencies]
+scanner-core = { workspace = true }
+scanner-engine = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }

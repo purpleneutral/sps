@@ -1,0 +1,19 @@
+[package]
+name = "scanner-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Scan orchestration engine for the Seglamater Privacy Scanner"
+
+[dependencies]
+scanner-core = { workspace = true }
+scanner-transport = { workspace = true }
+scanner-headers = { workspace = true }
+scanner-tracking = { workspace = true }
+scanner-cookies = { workspace = true }
+scanner-dns = { workspace = true }
+scanner-bestpractices = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }

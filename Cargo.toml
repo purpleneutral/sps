@@ -8,6 +8,8 @@ members = [
     "crates/scanner-cookies",
     "crates/scanner-dns",
     "crates/scanner-bestpractices",
+    "crates/scanner-engine",
+    "crates/scanner-server",
     "crates/scanner-cli",
 ]
 
@@ -38,7 +40,7 @@ hickory-proto = "0.25"
 scraper = "0.22"
 
 # CLI
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -64,6 +66,12 @@ colored = "3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# Web server
+axum = { version = "0.8", features = ["macros"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "chrono"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+
 # Internal crates
 scanner-core = { path = "crates/scanner-core" }
 scanner-transport = { path = "crates/scanner-transport" }
@@ -72,3 +80,5 @@ scanner-tracking = { path = "crates/scanner-tracking" }
 scanner-cookies = { path = "crates/scanner-cookies" }
 scanner-dns = { path = "crates/scanner-dns" }
 scanner-bestpractices = { path = "crates/scanner-bestpractices" }
+scanner-engine = { path = "crates/scanner-engine" }
+scanner-server = { path = "crates/scanner-server" }

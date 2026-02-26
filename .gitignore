@@ -18,6 +18,11 @@ Thumbs.db
 .env
 .env.local
 
+# Database
+*.db
+*.db-shm
+*.db-wal
+
 # Blocklists (downloaded at build/runtime)
 blocklists/*.txt
 blocklists/*.json

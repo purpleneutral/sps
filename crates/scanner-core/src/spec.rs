@@ -104,6 +104,18 @@ impl Grade {
     pub fn is_verified(self) -> bool {
         matches!(self, Grade::APlus | Grade::A)
     }
+
+    /// Hex color for badge SVG rendering (shields.io style).
+    pub fn badge_color_hex(self) -> &'static str {
+        match self {
+            Grade::APlus => "#4c1",
+            Grade::A => "#97ca00",
+            Grade::B => "#007ec6",
+            Grade::C => "#dfb317",
+            Grade::D => "#fe7d37",
+            Grade::F => "#e05d44",
+        }
+    }
 }
 
 impl fmt::Display for Grade {
