@@ -28,3 +28,6 @@ blocklists/*.txt
 blocklists/*.json
 !blocklists/update.sh
 !blocklists/.gitkeep
+
+# Internal planning documents
+PLAN.md
