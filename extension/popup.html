@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
+  <title>SPS</title>
+</head>
+<body>
+  <div id="app">
+    <div id="header">
+      <span id="logo">SPS</span>
+      <span id="version">v1.0</span>
+    </div>
+
+    <div id="loading" class="state">
+      <div class="spinner"></div>
+      <p>Checking...</p>
+    </div>
+
+    <div id="disabled" class="state hidden">
+      <p class="dim">Not available for this page</p>
+    </div>
+
+    <div id="result" class="state hidden">
+      <div id="gradeCircle" class="grade-circle">
+        <span id="gradeText">?</span>
+      </div>
+      <div id="domain" class="domain"></div>
+      <div id="scoreLine" class="score-line"></div>
+      <div id="scannedAt" class="meta"></div>
+      <div id="actions">
+        <button id="scanBtn" class="btn-scan" type="button">Scan Now</button>
+        <a id="detailLink" href="#" target="_blank" rel="noopener" class="btn-detail">Full Report</a>
+      </div>
+    </div>
+
+    <div id="noscan" class="state hidden">
+      <div id="noscanDomain" class="domain"></div>
+      <p class="dim">No scan results found</p>
+      <button id="noscanBtn" class="btn-scan" type="button">Scan Now</button>
+    </div>
+
+    <div id="scanning" class="state hidden">
+      <div class="spinner"></div>
+      <p>Scanning... this may take up to 30s</p>
+    </div>
+
+    <div id="error" class="state hidden">
+      <p id="errorMsg" class="error-text"></p>
+      <button id="retryBtn" class="btn-scan" type="button">Try Again</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

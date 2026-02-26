@@ -467,7 +467,7 @@ Input domains are automatically normalized:
 
 ## Roadmap
 
-- **Browser extension** — Scan and display the SPS score for the current page directly in your browser
+- **Browser extension** — Available in [`extension/`](extension/). Shows the SPS grade for every site in your toolbar. Chrome and Firefox, Manifest V3.
 - **CI/CD integration** — GitHub Action for automated privacy regression testing
 - **Spec v1.1** — Additional checks based on community feedback
 - **Blocklist updates** — Automated tracker/analytics list refresh from upstream sources
