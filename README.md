@@ -483,6 +483,10 @@ For code contributions:
 
 If you think the specification itself should change, open a discussion issue first — spec changes affect every scan.
 
+## Support
+
+If you find this project useful, you can [buy me a coffee](https://buymeacoffee.com/uniqueuserg).
+
 ## License
 
 GPL-3.0-only. See [LICENSE](LICENSE) for details.
