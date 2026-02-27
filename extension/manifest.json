@@ -18,6 +18,7 @@
     "default_title": "SPS Privacy Grade"
   },
   "background": {
+    "service_worker": "background.js",
     "scripts": ["background.js"]
   },
   "permissions": [
