@@ -36,7 +36,7 @@
       "data_collection_permissions": {
         "urlbar_data_collection": false,
         "private_browsing_data_collection": false,
-        "required": []
+        "required": ["none"]
       }
     }
   }
