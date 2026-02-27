@@ -28,5 +28,11 @@
   "host_permissions": [
     "https://seglamater.app/*"
   ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sps@seglamater.app",
+      "strict_min_version": "109.0"
+    }
+  },
   "incognito": "split"
 }
