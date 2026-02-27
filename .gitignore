@@ -32,3 +32,6 @@ blocklists/*.json
 # Internal planning documents
 PLAN.md
 CLAUDE.md
+
+# Build artifacts
+sps-extension.zip

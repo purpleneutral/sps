@@ -467,7 +467,7 @@ Input domains are automatically normalized:
 
 ## Roadmap
 
-- **Browser extension** — Available in [`extension/`](extension/). Shows the SPS grade for every site in your toolbar. Chrome and Firefox, Manifest V3.
+- **Browser extension** -- Available at [purpleneutral/sps-extension](https://github.com/purpleneutral/sps-extension). Shows the SPS grade for every site in your toolbar. Chrome and Firefox, Manifest V3.
 - **CI/CD integration** — GitHub Action for automated privacy regression testing
 - **Spec v1.1** — Additional checks based on community feedback
 - **Blocklist updates** — Automated tracker/analytics list refresh from upstream sources
