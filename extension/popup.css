@@ -6,10 +6,12 @@
 
 body {
   width: 320px;
+  min-height: 280px;
   font-family: "Inter", -apple-system, system-ui, sans-serif;
   background: #05000a;
   color: #b0b0b0;
   padding: 16px;
+  overflow: hidden;
 }
 
 /* Header */
