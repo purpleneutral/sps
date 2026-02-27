@@ -1,13 +1,17 @@
 mod recommendations;
+pub mod validate;
 
 use anyhow::{Context, Result};
 use scanner_core::check::CategoryResult;
 use scanner_core::score::ScanResult;
 
 pub use recommendations::generate_recommendations;
+pub use validate::validate_domain;
 
 /// Run a full scan against a domain and return the complete result.
 pub async fn run_scan(domain: &str) -> Result<ScanResult> {
+    validate::validate_domain(domain).await?;
+
     let (headers, html, set_cookie_headers) = fetch_page(domain).await?;
 
     let page_url = format!("https://{domain}/");
@@ -49,7 +53,23 @@ pub async fn fetch_page(
 ) -> Result<(reqwest::header::HeaderMap, String, Vec<String>)> {
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(false)
-        .redirect(reqwest::redirect::Policy::limited(10))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 10 {
+                attempt.stop()
+            } else if let Some(host) = attempt.url().host_str() {
+                if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                    if crate::validate::is_private_ip(&ip) {
+                        attempt.stop()
+                    } else {
+                        attempt.follow()
+                    }
+                } else {
+                    attempt.follow()
+                }
+            } else {
+                attempt.follow()
+            }
+        }))
         .timeout(std::time::Duration::from_secs(30))
         .user_agent("Mozilla/5.0 (compatible; SeglamaterScan/0.1; +https://seglamater.com/scan)")
         .build()

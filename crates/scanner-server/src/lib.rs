@@ -1,11 +1,18 @@
 pub mod api;
+pub mod auth;
 pub mod badge;
+pub mod rate_limit;
 pub mod scheduler;
 pub mod storage;
 
 use anyhow::Result;
+use axum::http::header::{self, HeaderName};
+use axum::http::{HeaderValue, Method as HttpMethod};
+use axum::middleware;
 use axum::routing::{get, post};
+use axum::Extension;
 use axum::Router;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use storage::AnyStorage;
 use tower_http::compression::CompressionLayer;
@@ -29,29 +36,68 @@ pub async fn run_server(host: &str, port: u16, database_url: &str) -> Result<()>
     tracing::info!("Badge URL: http://{addr}/badge/{{domain}}.svg");
     tracing::info!("API docs: POST /api/scan, GET /api/verify/:domain");
 
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }
 
+fn build_cors_layer() -> CorsLayer {
+    let origins_str = std::env::var("SPS_CORS_ORIGINS")
+        .unwrap_or_else(|_| "https://seglamater.app,https://seglamater.com".to_string());
+
+    let origins: Vec<HeaderValue> = origins_str
+        .split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect();
+
+    CorsLayer::new()
+        .allow_origin(origins)
+        .allow_methods([HttpMethod::GET, HttpMethod::POST])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::AUTHORIZATION,
+            HeaderName::from_static("x-api-key"),
+        ])
+}
+
 fn build_router(storage: Arc<AnyStorage>) -> Router {
+    let rate_limit_state = rate_limit::RateLimitState::new();
+
     Router::new()
         // Scan endpoints
         .route("/api/scan", post(api::scan_domain::<AnyStorage>))
-        .route("/api/verify/{domain}", get(api::verify_domain::<AnyStorage>))
-        .route("/api/history/{domain}", get(api::domain_history::<AnyStorage>))
+        .route(
+            "/api/verify/{domain}",
+            get(api::verify_domain::<AnyStorage>),
+        )
+        .route(
+            "/api/history/{domain}",
+            get(api::domain_history::<AnyStorage>),
+        )
         // Domain management
         .route(
             "/api/domains",
             get(api::list_domains::<AnyStorage>).post(api::register_domain::<AnyStorage>),
         )
-        .route("/api/domains/search", get(api::search_domains::<AnyStorage>))
+        .route(
+            "/api/domains/search",
+            get(api::search_domains::<AnyStorage>),
+        )
         // Statistics
         .route("/api/stats", get(api::get_stats::<AnyStorage>))
         // Badge
         .route("/badge/{filename}", get(api::badge_svg::<AnyStorage>))
+        // Auth gate on write endpoints (POST/PUT/DELETE only; reads pass through)
+        .layer(middleware::from_fn(auth::require_api_key))
+        // Per-IP rate limiting (write = 5/min, read = 60/min)
+        .layer(middleware::from_fn(rate_limit::rate_limit_middleware))
+        .layer(Extension(rate_limit_state))
         .layer(CompressionLayer::new())
-        .layer(CorsLayer::permissive())
+        .layer(build_cors_layer())
         .layer(TraceLayer::new_for_http())
         .with_state(storage)
 }

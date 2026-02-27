@@ -8,6 +8,8 @@ services:
     environment:
       - DATABASE_URL=sqlite:///data/scanner.db
       - RUST_LOG=info
+      - SPS_API_KEY=${SPS_API_KEY:-}
+      - SPS_CORS_ORIGINS=${SPS_CORS_ORIGINS:-https://seglamater.app,https://seglamater.com}
     restart: unless-stopped
 
 volumes:

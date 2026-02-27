@@ -15,5 +15,6 @@ scanner-dns = { workspace = true }
 scanner-bestpractices = { workspace = true }
 tokio = { workspace = true }
 reqwest = { workspace = true }
+hickory-resolver = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }

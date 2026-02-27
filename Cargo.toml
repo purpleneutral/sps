@@ -72,6 +72,9 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "chrono"] }
 tower = { version = "0.5" }
 tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
 
+# Rate limiting
+governor = "0.8"
+
 # Internal crates
 scanner-core = { path = "crates/scanner-core" }
 scanner-transport = { path = "crates/scanner-transport" }

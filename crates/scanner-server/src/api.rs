@@ -63,6 +63,14 @@ fn json_error(status: StatusCode, msg: impl Into<String>) -> Response {
     (status, Json(ErrorResponse { error: msg.into() })).into_response()
 }
 
+fn clamp_limit(v: i64) -> i64 {
+    v.clamp(1, 100)
+}
+
+fn clamp_offset(v: i64) -> i64 {
+    v.max(0)
+}
+
 // ── Handlers ────────────────────────────────────────────────────────
 
 /// POST /api/scan — trigger a scan and store the result.
@@ -75,18 +83,29 @@ pub async fn scan_domain<S: Storage>(
         return json_error(StatusCode::BAD_REQUEST, "Domain is required");
     }
 
+    // Validate domain before scanning (safe to show validation errors)
+    if let Err(e) = scanner_engine::validate_domain(&domain).await {
+        return json_error(StatusCode::BAD_REQUEST, e.to_string());
+    }
+
     let result = match scanner_engine::run_scan(&domain).await {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("Scan failed for {domain}: {e:#}");
             return json_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Scan failed: {e}"),
+                "Scan failed — please try again later",
             );
         }
     };
 
-    let scan_json = serde_json::to_string(&result).unwrap();
+    let scan_json = match serde_json::to_string(&result) {
+        Ok(json) => json,
+        Err(e) => {
+            tracing::error!("Failed to serialize scan result for {domain}: {e:#}");
+            return json_error(StatusCode::INTERNAL_SERVER_ERROR, "Internal error");
+        }
+    };
     let grade_str = result.grade.to_string();
 
     if let Err(e) = storage
@@ -133,7 +152,7 @@ pub async fn domain_history<S: Storage>(
 ) -> Response {
     let domain = normalize_domain(&domain);
 
-    match storage.get_history(&domain, query.limit).await {
+    match storage.get_history(&domain, clamp_limit(query.limit)).await {
         Ok(records) => {
             let summaries: Vec<serde_json::Value> = records
                 .into_iter()
@@ -161,7 +180,7 @@ pub async fn list_domains<S: Storage>(
     State(storage): State<AppState<S>>,
     Query(query): Query<ListQuery>,
 ) -> Response {
-    match storage.list_domains(query.limit, query.offset).await {
+    match storage.list_domains(clamp_limit(query.limit), clamp_offset(query.offset)).await {
         Ok(records) => {
             let summaries: Vec<serde_json::Value> = records
                 .into_iter()
@@ -193,12 +212,19 @@ pub async fn register_domain<S: Storage>(
         return json_error(StatusCode::BAD_REQUEST, "Domain is required");
     }
 
-    match storage.register_domain(&domain, req.interval_hours).await {
+    // Validate domain before registering (prevent registering internal targets)
+    if let Err(e) = scanner_engine::validate_domain(&domain).await {
+        return json_error(StatusCode::BAD_REQUEST, e.to_string());
+    }
+
+    let interval = req.interval_hours.clamp(1, 720);
+
+    match storage.register_domain(&domain, interval).await {
         Ok(()) => (
             StatusCode::OK,
             Json(serde_json::json!({
                 "domain": domain,
-                "interval_hours": req.interval_hours,
+                "interval_hours": interval,
                 "status": "registered"
             })),
         )
@@ -215,7 +241,7 @@ pub async fn search_domains<S: Storage>(
     State(storage): State<AppState<S>>,
     Query(query): Query<SearchQuery>,
 ) -> Response {
-    match storage.search_domains(&query.q, query.limit).await {
+    match storage.search_domains(&query.q, clamp_limit(query.limit)).await {
         Ok(records) => {
             let summaries: Vec<serde_json::Value> = records
                 .into_iter()

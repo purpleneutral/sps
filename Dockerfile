@@ -38,13 +38,18 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN groupadd --system scanner && useradd --system --gid scanner scanner
+
 COPY --from=builder /app/target/release/seglamater-scan /usr/local/bin/seglamater-scan
 
 # Create data directory for SQLite
-RUN mkdir -p /data
+RUN mkdir -p /data && chown scanner:scanner /data
 WORKDIR /data
 
 ENV DATABASE_URL="sqlite:///data/scanner.db"
+
+USER scanner
 
 EXPOSE 8080
 
