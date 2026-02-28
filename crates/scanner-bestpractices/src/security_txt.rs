@@ -7,7 +7,23 @@ const CAT: Category = Category::BestPractices;
 pub async fn check_security_txt(domain: &str) -> CheckResult {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
-        .redirect(reqwest::redirect::Policy::limited(3))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 3 {
+                attempt.stop()
+            } else if let Some(host) = attempt.url().host_str() {
+                if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                    if scanner_core::ssrf::is_private_ip(&ip) {
+                        attempt.stop()
+                    } else {
+                        attempt.follow()
+                    }
+                } else {
+                    attempt.follow()
+                }
+            } else {
+                attempt.follow()
+            }
+        }))
         .build();
 
     let client = match client {

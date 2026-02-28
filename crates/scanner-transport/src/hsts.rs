@@ -133,7 +133,23 @@ pub async fn check_hsts(domain: &str) -> Vec<CheckResult> {
 async fn fetch_hsts_header(domain: &str) -> Option<String> {
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(false)
-        .redirect(reqwest::redirect::Policy::limited(5))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 5 {
+                attempt.stop()
+            } else if let Some(host) = attempt.url().host_str() {
+                if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                    if scanner_core::ssrf::is_private_ip(&ip) {
+                        attempt.stop()
+                    } else {
+                        attempt.follow()
+                    }
+                } else {
+                    attempt.follow()
+                }
+            } else {
+                attempt.follow()
+            }
+        }))
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .ok()?;

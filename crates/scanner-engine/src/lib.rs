@@ -1,12 +1,18 @@
 mod recommendations;
 pub mod validate;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use hickory_resolver::TokioResolver;
 use scanner_core::check::CategoryResult;
 use scanner_core::score::ScanResult;
+use scanner_core::ssrf::is_private_ip;
+use std::net::{IpAddr, SocketAddr};
 
 pub use recommendations::generate_recommendations;
 pub use validate::validate_domain;
+
+/// Maximum response body size (10 MB).
+const MAX_BODY_SIZE: usize = 10 * 1024 * 1024;
 
 /// Run a full scan against a domain and return the complete result.
 pub async fn run_scan(domain: &str) -> Result<ScanResult> {
@@ -51,14 +57,32 @@ pub async fn run_scan(domain: &str) -> Result<ScanResult> {
 pub async fn fetch_page(
     domain: &str,
 ) -> Result<(reqwest::header::HeaderMap, String, Vec<String>)> {
+    // Resolve DNS and pin to prevent rebinding attacks
+    let resolver = TokioResolver::builder_tokio()
+        .map_err(|_| anyhow::anyhow!("Failed to create DNS resolver"))?
+        .build();
+
+    let ips: Vec<IpAddr> = resolver
+        .lookup_ip(domain)
+        .await
+        .context(format!("DNS resolution failed for {domain}"))?
+        .iter()
+        .collect();
+
+    let pin_ip = ips
+        .iter()
+        .find(|ip| !is_private_ip(ip))
+        .ok_or_else(|| anyhow::anyhow!("Domain resolves to private IPs only"))?;
+
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(false)
+        .resolve(domain, SocketAddr::new(*pin_ip, 443))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() >= 10 {
                 attempt.stop()
             } else if let Some(host) = attempt.url().host_str() {
                 if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-                    if crate::validate::is_private_ip(&ip) {
+                    if scanner_core::ssrf::is_private_ip(&ip) {
                         attempt.stop()
                     } else {
                         attempt.follow()
@@ -71,7 +95,9 @@ pub async fn fetch_page(
             }
         }))
         .timeout(std::time::Duration::from_secs(30))
-        .user_agent("Mozilla/5.0 (compatible; SeglamaterScan/0.1; +https://seglamater.com/scan)")
+        .user_agent(
+            "Mozilla/5.0 (compatible; SeglamaterScan/0.1; +https://seglamater.app/privacy)",
+        )
         .build()
         .context("Failed to build HTTP client")?;
 
@@ -92,10 +118,23 @@ pub async fn fetch_page(
         .map(|s| s.to_string())
         .collect();
 
-    let html = resp
-        .text()
+    // Enforce body size limit
+    if let Some(len) = resp.content_length() {
+        if len > MAX_BODY_SIZE as u64 {
+            bail!("Response body too large");
+        }
+    }
+
+    let bytes = resp
+        .bytes()
         .await
         .context("Failed to read response body")?;
+
+    if bytes.len() > MAX_BODY_SIZE {
+        bail!("Response body too large");
+    }
+
+    let html = String::from_utf8_lossy(&bytes).into_owned();
 
     Ok((headers, html, set_cookie_headers))
 }

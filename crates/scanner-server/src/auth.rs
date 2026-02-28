@@ -3,6 +3,17 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 
+/// Constant-time string comparison to prevent timing attacks on API key.
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.bytes()
+        .zip(b.bytes())
+        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+        == 0
+}
+
 /// Middleware that requires an API key for write endpoints (POST/PUT/DELETE).
 ///
 /// If `SPS_API_KEY` is unset or empty, all requests pass through (open mode).
@@ -22,7 +33,7 @@ pub async fn require_api_key(req: axum::extract::Request, next: Next) -> Respons
     // Check X-API-Key header
     if let Some(val) = req.headers().get("x-api-key") {
         if let Ok(provided) = val.to_str() {
-            if provided == expected {
+            if constant_time_eq(provided, &expected) {
                 return next.run(req).await;
             }
         }
@@ -32,7 +43,7 @@ pub async fn require_api_key(req: axum::extract::Request, next: Next) -> Respons
     if let Some(val) = req.headers().get("authorization") {
         if let Ok(provided) = val.to_str() {
             if let Some(token) = provided.strip_prefix("Bearer ") {
-                if token == expected {
+                if constant_time_eq(token, &expected) {
                     return next.run(req).await;
                 }
             }

@@ -14,8 +14,8 @@ type KeyedLimiter = RateLimiter<IpAddr, DashMapStateStore<IpAddr>, DefaultClock>
 
 #[derive(Clone)]
 pub struct RateLimitState {
-    write_limiter: Arc<KeyedLimiter>,
-    read_limiter: Arc<KeyedLimiter>,
+    pub(crate) write_limiter: Arc<KeyedLimiter>,
+    pub(crate) read_limiter: Arc<KeyedLimiter>,
 }
 
 impl RateLimitState {
@@ -30,12 +30,29 @@ impl RateLimitState {
     }
 }
 
+/// Spawn a background task that periodically evicts stale rate limiter entries.
+pub fn spawn_cleanup(state: &RateLimitState) {
+    let write = Arc::clone(&state.write_limiter);
+    let read = Arc::clone(&state.read_limiter);
+
+    tokio::spawn(async move {
+        let interval = std::time::Duration::from_secs(10 * 60); // 10 minutes
+        loop {
+            tokio::time::sleep(interval).await;
+            write.retain_recent();
+            read.retain_recent();
+            tracing::debug!("Rate limiter: evicted stale entries");
+        }
+    });
+}
+
 fn extract_client_ip(req: &axum::extract::Request) -> IpAddr {
-    // Try X-Forwarded-For (behind reverse proxy like Traefik/Caddy)
+    // Try X-Forwarded-For (behind reverse proxy like Traefik/Caddy).
+    // Use the last (rightmost) IP — that's the one appended by the trusted proxy.
     if let Some(forwarded) = req.headers().get("x-forwarded-for") {
         if let Ok(val) = forwarded.to_str() {
-            if let Some(first) = val.split(',').next() {
-                if let Ok(ip) = first.trim().parse::<IpAddr>() {
+            if let Some(last) = val.rsplit(',').next() {
+                if let Ok(ip) = last.trim().parse::<IpAddr>() {
                     return ip;
                 }
             }

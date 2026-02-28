@@ -5,16 +5,29 @@ pub mod dnssec;
 pub mod spf;
 
 use hickory_resolver::TokioResolver;
-use scanner_core::check::CategoryResult;
+use scanner_core::check::{CategoryResult, CheckResult};
 use scanner_core::spec::Category;
 
 const CAT: Category = Category::EmailDnsSecurity;
 
 /// Run all DNS and email security checks.
 pub async fn check_dns(domain: &str) -> CategoryResult {
-    let resolver = TokioResolver::builder_tokio()
-        .expect("Failed to create DNS resolver")
-        .build();
+    let resolver = match TokioResolver::builder_tokio() {
+        Ok(builder) => builder.build(),
+        Err(e) => {
+            tracing::error!("Failed to create DNS resolver: {e}");
+            return CategoryResult::new(
+                CAT,
+                vec![CheckResult::fail(
+                    CAT,
+                    "dns_resolver",
+                    "DNS resolver available",
+                    0,
+                    Some("DNS resolver initialization failed".into()),
+                )],
+            );
+        }
+    };
 
     let mut checks = Vec::new();
 

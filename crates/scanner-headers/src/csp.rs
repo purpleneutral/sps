@@ -120,8 +120,9 @@ fn extract_directive<'a>(csp: &'a str, directive: &str) -> Option<&'a str> {
 }
 
 fn truncate_for_display(s: &str, max_len: usize) -> String {
-    if s.len() > max_len {
-        format!("{}...", &s[..max_len])
+    if s.chars().count() > max_len {
+        let truncated: String = s.chars().take(max_len).collect();
+        format!("{truncated}...")
     } else {
         s.to_string()
     }

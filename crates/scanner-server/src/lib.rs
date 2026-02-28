@@ -9,6 +9,7 @@ use anyhow::Result;
 use axum::http::header::{self, HeaderName};
 use axum::http::{HeaderValue, Method as HttpMethod};
 use axum::middleware;
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::Extension;
 use axum::Router;
@@ -64,8 +65,20 @@ fn build_cors_layer() -> CorsLayer {
         ])
 }
 
+async fn security_headers_middleware(
+    req: axum::extract::Request,
+    next: middleware::Next,
+) -> Response {
+    let mut resp = next.run(req).await;
+    let headers = resp.headers_mut();
+    headers.insert("x-content-type-options", "nosniff".parse().unwrap());
+    headers.insert("x-frame-options", "DENY".parse().unwrap());
+    resp
+}
+
 fn build_router(storage: Arc<AnyStorage>) -> Router {
     let rate_limit_state = rate_limit::RateLimitState::new();
+    rate_limit::spawn_cleanup(&rate_limit_state);
 
     Router::new()
         // Scan endpoints
@@ -96,6 +109,8 @@ fn build_router(storage: Arc<AnyStorage>) -> Router {
         // Per-IP rate limiting (write = 5/min, read = 60/min)
         .layer(middleware::from_fn(rate_limit::rate_limit_middleware))
         .layer(Extension(rate_limit_state))
+        // Security response headers
+        .layer(middleware::from_fn(security_headers_middleware))
         .layer(CompressionLayer::new())
         .layer(build_cors_layer())
         .layer(TraceLayer::new_for_http())

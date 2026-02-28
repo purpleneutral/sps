@@ -390,7 +390,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgres://scanner:password@db:5432/scanner
+      - DATABASE_URL=postgres://scanner:<your-secure-password>@db:5432/scanner
       - RUST_LOG=info
     depends_on:
       - db
@@ -399,7 +399,7 @@ services:
     image: postgres:17
     environment:
       - POSTGRES_USER=scanner
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=<your-secure-password>
       - POSTGRES_DB=scanner
     volumes:
       - pg-data:/var/lib/postgresql/data
@@ -414,6 +414,8 @@ volumes:
 |----------|-------------|---------|
 | `DATABASE_URL` | Database connection string | `sqlite://./scanner.db` |
 | `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | `info` |
+| `SPS_API_KEY` | API key for write endpoints (unset = open mode) | *(unset)* |
+| `SPS_CORS_ORIGINS` | Comma-separated allowed origins | `https://seglamater.app,https://seglamater.com` |
 
 ## Background Scheduler
 

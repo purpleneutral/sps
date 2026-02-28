@@ -140,5 +140,5 @@ pub async fn connect(database_url: &str) -> Result<AnyStorage> {
         }
     }
 
-    anyhow::bail!("Unsupported database URL scheme: {database_url}");
+    anyhow::bail!("Unsupported database URL scheme — expected sqlite:// or postgres://");
 }
