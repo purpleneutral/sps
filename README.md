@@ -1,6 +1,7 @@
 # Seglamater Privacy Standard (SPS)
 
 [![SPS Score](https://seglamater.app/api/privacy/badge/seglamater.app.svg)](https://seglamater.app/privacy/scan/seglamater.app)
+[![CI](https://github.com/purpleneutral/sps/actions/workflows/ci.yml/badge.svg)](https://github.com/purpleneutral/sps/actions/workflows/ci.yml)
 
 An open-source privacy scanner that evaluates websites against the [Seglamater Privacy Specification (SPS) v1.0](spec/v1.0.md). Scores sites from 0 to 100 across six categories and assigns a letter grade.
 
@@ -490,6 +491,66 @@ When running in server mode, a background scheduler automatically re-scans regis
 - Waits 2 seconds between scans to be respectful to target servers
 - Register domains via `POST /api/domains` with a custom `interval_hours`
 
+## CI/CD Integration
+
+Use the SPS GitHub Action to scan your domain in CI and fail the build if the privacy score drops below a threshold.
+
+### Basic usage
+
+```yaml
+- uses: purpleneutral/sps@v1
+  with:
+    domain: example.com
+    threshold: 75
+```
+
+### Full example
+
+```yaml
+name: Privacy Check
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6am
+
+jobs:
+  sps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: purpleneutral/sps@v1
+        id: scan
+        with:
+          domain: example.com
+          threshold: 75
+          min-grade: B
+
+      - run: echo "Score ${{ steps.scan.outputs.score }}/100 (${{ steps.scan.outputs.grade }})"
+```
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `domain` | Yes | — | Domain to scan |
+| `threshold` | No | `0` | Minimum score (0-100) to pass |
+| `min-grade` | No | — | Minimum grade (`A+`, `A`, `B`, `C`, `D`, `F`) |
+| `api-url` | No | `https://seglamater.app/api/privacy` | API base URL (override for self-hosted) |
+| `trigger-scan` | No | `true` | Trigger a fresh scan or read the latest existing result |
+| `fail-on-error` | No | `true` | Fail the build if the API is unreachable |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `score` | Numeric score (0-100) |
+| `grade` | Letter grade |
+| `passed` | `true` or `false` |
+| `domain` | Normalized domain |
+| `scan-url` | Link to full results |
+
+The action calls the public SPS API. Fresh scans (`trigger-scan: true`) take 10-60 seconds depending on the target site. The public API is rate-limited to 3 scans/minute per IP — for high-frequency CI, use `trigger-scan: false` to read existing results.
+
 ## Architecture
 
 ```
@@ -538,8 +599,8 @@ Input domains are automatically normalized:
 
 ## Roadmap
 
-- **Browser extension** -- Available at [purpleneutral/sps-extension](https://github.com/purpleneutral/sps-extension). Shows the SPS grade for every site in your toolbar. Chrome and Firefox, Manifest V3.
-- **CI/CD integration** — GitHub Action for automated privacy regression testing
+- **Browser extension** — Available at [purpleneutral/sps-extension](https://github.com/purpleneutral/sps-extension). Shows the SPS grade for every site in your toolbar. Chrome and Firefox, Manifest V3.
+- **CI/CD integration** — Available. See [CI/CD Integration](#cicd-integration) for usage.
 - **Spec v1.1** — Additional checks based on community feedback
 - **Blocklist updates** — Automated tracker/analytics list refresh from upstream sources
 

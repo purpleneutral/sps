@@ -1,0 +1,178 @@
+name: 'SPS Privacy Scan'
+description: 'Scan a website against the Seglamater Privacy Specification and enforce a minimum score or grade in CI.'
+author: 'Seglamater Services'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  domain:
+    description: 'Domain to scan (e.g., example.com)'
+    required: true
+  threshold:
+    description: 'Minimum score (0-100) to pass. 0 means no score check.'
+    required: false
+    default: '0'
+  min-grade:
+    description: 'Minimum grade to pass (A+, A, B, C, D, F). Empty means no grade check.'
+    required: false
+    default: ''
+  api-url:
+    description: 'SPS API base URL. Override for self-hosted instances.'
+    required: false
+    default: 'https://seglamater.app/api/privacy'
+  trigger-scan:
+    description: 'Trigger a fresh scan (true) or read the latest existing result (false).'
+    required: false
+    default: 'true'
+  fail-on-error:
+    description: 'Fail the action if the API is unreachable or returns an error.'
+    required: false
+    default: 'true'
+
+outputs:
+  score:
+    description: 'Numeric privacy score (0-100)'
+    value: ${{ steps.scan.outputs.score }}
+  grade:
+    description: 'Letter grade (A+, A, B, C, D, F)'
+    value: ${{ steps.scan.outputs.grade }}
+  passed:
+    description: 'Whether the scan met the threshold and grade requirements'
+    value: ${{ steps.evaluate.outputs.passed }}
+  domain:
+    description: 'Normalized domain that was scanned'
+    value: ${{ steps.scan.outputs.domain }}
+  scan-url:
+    description: 'URL to view the full scan result'
+    value: ${{ steps.scan.outputs.scan_url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run SPS scan
+      id: scan
+      shell: bash
+      env:
+        INPUT_DOMAIN: ${{ inputs.domain }}
+        INPUT_API_URL: ${{ inputs.api-url }}
+        INPUT_TRIGGER_SCAN: ${{ inputs.trigger-scan }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+      run: |
+        # Normalize domain: strip protocol, path, port, lowercase, trim
+        DOMAIN=$(echo "$INPUT_DOMAIN" | sed 's|^https\?://||' | sed 's|/.*||' | sed 's|:.*||' | tr '[:upper:]' '[:lower:]' | xargs)
+
+        if [ -z "$DOMAIN" ]; then
+          echo "::error::domain input is required"
+          exit 1
+        fi
+
+        API_URL="${INPUT_API_URL%/}"
+        SITE_URL="${API_URL%/api/privacy}"
+
+        # Call the SPS API
+        if [ "$INPUT_TRIGGER_SCAN" = "true" ]; then
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "${API_URL}/scan" \
+            -H "Content-Type: application/json" \
+            -d "{\"domain\": \"${DOMAIN}\"}" \
+            --max-time 120 2>&1) || true
+        else
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${API_URL}/verify/${DOMAIN}" \
+            --max-time 30 2>&1) || true
+        fi
+
+        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -1)
+        BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+        # Handle non-200 responses
+        if ! echo "$HTTP_CODE" | grep -qE '^[0-9]+$' || [ "$HTTP_CODE" -ne 200 ]; then
+          echo "::warning::SPS API returned HTTP $HTTP_CODE for $DOMAIN"
+          if [ "$INPUT_FAIL_ON_ERROR" = "true" ]; then
+            ERROR_MSG=$(echo "$BODY" | jq -r '.error // .detail // "unknown error"' 2>/dev/null || echo "API unreachable")
+            echo "::error::SPS scan failed (HTTP $HTTP_CODE): $ERROR_MSG"
+            exit 1
+          fi
+          echo "score=0" >> "$GITHUB_OUTPUT"
+          echo "grade=unknown" >> "$GITHUB_OUTPUT"
+          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "scan_url=${SITE_URL}/privacy/scan/$DOMAIN" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Extract results
+        SCORE=$(echo "$BODY" | jq -r '.total_score // 0')
+        GRADE=$(echo "$BODY" | jq -r '.grade // "unknown"')
+        SCANNED_DOMAIN=$(echo "$BODY" | jq -r '.domain // "'"$DOMAIN"'"')
+
+        # Normalize APlus -> A+
+        if [ "$GRADE" = "APlus" ]; then
+          GRADE="A+"
+        fi
+
+        echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+        echo "grade=$GRADE" >> "$GITHUB_OUTPUT"
+        echo "domain=$SCANNED_DOMAIN" >> "$GITHUB_OUTPUT"
+        echo "scan_url=${SITE_URL}/privacy/scan/$SCANNED_DOMAIN" >> "$GITHUB_OUTPUT"
+
+        # Write step summary
+        {
+          echo "### SPS Privacy Scan"
+          echo ""
+          echo "| Field | Value |"
+          echo "|-------|-------|"
+          echo "| Domain | \`$SCANNED_DOMAIN\` |"
+          echo "| Score | **$SCORE**/100 |"
+          echo "| Grade | **$GRADE** |"
+          echo "| Details | [View full scan](${SITE_URL}/privacy/scan/$SCANNED_DOMAIN) |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Evaluate thresholds
+      id: evaluate
+      shell: bash
+      env:
+        SCORE: ${{ steps.scan.outputs.score }}
+        GRADE: ${{ steps.scan.outputs.grade }}
+        INPUT_THRESHOLD: ${{ inputs.threshold }}
+        INPUT_MIN_GRADE: ${{ inputs.min-grade }}
+      run: |
+        PASSED=true
+
+        # Map grades to numeric ranks for comparison
+        grade_rank() {
+          case "$1" in
+            A+|APlus) echo 6 ;;
+            A)        echo 5 ;;
+            B)        echo 4 ;;
+            C)        echo 3 ;;
+            D)        echo 2 ;;
+            F)        echo 1 ;;
+            *)        echo 0 ;;
+          esac
+        }
+
+        # Check score threshold
+        if [ "$INPUT_THRESHOLD" -gt 0 ] 2>/dev/null; then
+          if [ "$SCORE" -lt "$INPUT_THRESHOLD" ]; then
+            echo "::error::SPS score $SCORE is below threshold $INPUT_THRESHOLD"
+            PASSED=false
+          fi
+        fi
+
+        # Check grade threshold
+        if [ -n "$INPUT_MIN_GRADE" ]; then
+          ACTUAL_RANK=$(grade_rank "$GRADE")
+          REQUIRED_RANK=$(grade_rank "$INPUT_MIN_GRADE")
+          if [ "$ACTUAL_RANK" -lt "$REQUIRED_RANK" ]; then
+            echo "::error::SPS grade $GRADE is below minimum $INPUT_MIN_GRADE"
+            PASSED=false
+          fi
+        fi
+
+        echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+
+        if [ "$PASSED" = "false" ]; then
+          exit 1
+        fi
