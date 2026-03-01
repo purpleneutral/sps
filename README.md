@@ -241,7 +241,7 @@ Returns an "unknown" badge if no scan exists for the domain.
 
 ```html
 <a href="https://seglamater.app/privacy/scan/example.com">
-  <img src="https://seglamater.app/api/privacy/badge/example.com.svg" alt="SPS Score">
+  <img src="https://seglamater.app/api/privacy/badge/example.com.svg" alt="SPS Score" height="20">
 </a>
 ```
 
@@ -249,6 +249,32 @@ Returns an "unknown" badge if no scan exists for the domain.
 
 ```markdown
 [![SPS Score](https://seglamater.app/api/privacy/badge/example.com.svg)](https://seglamater.app/privacy/scan/example.com)
+```
+
+### GET /dial/:domain.svg
+
+Circular score dial SVG showing the numeric score, letter grade, and SPS branding. Returns `image/svg+xml` with 1-hour cache.
+
+| Query Parameter | Description | Default |
+|----------------|-------------|---------|
+| `size` | Width and height in pixels (clamped to 60-300) | `120` |
+
+Returns a "no scan" placeholder if no scan exists for the domain.
+
+**Embed in HTML:**
+
+```html
+<a href="https://seglamater.app/privacy/scan/example.com">
+  <img src="https://seglamater.app/api/privacy/dial/example.com.svg" alt="SPS Score" width="120" height="120">
+</a>
+```
+
+**Custom size (80px):**
+
+```html
+<a href="https://seglamater.app/privacy/scan/example.com">
+  <img src="https://seglamater.app/api/privacy/dial/example.com.svg?size=80" alt="SPS Score" width="80" height="80">
+</a>
 ```
 
 ## Scoring Details
@@ -432,9 +458,10 @@ scanner-core           Core types, scoring, report formatting
   ^
 scanner-{transport, headers, tracking, cookies, dns, bestpractices}
   ^                    Individual check implementations
+scanner-browser        Headless Chromium page loading
 scanner-engine         Scan orchestration, page fetching, recommendations
   ^
-scanner-server         HTTP API, badge generation, storage, scheduler
+scanner-server         HTTP API, badge/dial generation, storage, scheduler
 scanner-cli            CLI interface (scan + serve subcommands)
 ```
 
@@ -447,8 +474,9 @@ scanner-cli            CLI interface (scan + serve subcommands)
 | `scanner-cookies` | Set-Cookie header parsing, attribute validation |
 | `scanner-dns` | SPF, DKIM, DMARC, DNSSEC, CAA record checks |
 | `scanner-bestpractices` | security.txt, privacy.json, JavaScript-free accessibility |
+| `scanner-browser` | Headless Chromium via CDP: page loading, network interception, cookie/HTML collection |
 | `scanner-engine` | Scan orchestration: `run_scan()`, `fetch_page()`, `normalize_domain()`, recommendation generation |
-| `scanner-server` | Axum HTTP server, Storage trait + SQLite/PostgreSQL backends, SVG badge generation, background scheduler |
+| `scanner-server` | Axum HTTP server, Storage trait + SQLite/PostgreSQL backends, SVG badge/dial generation, background scheduler |
 | `scanner-cli` | Binary entry point with `scan` and `serve` subcommands |
 
 ## Scan Behavior
