@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 description = "Scan orchestration engine for the Seglamater Privacy Scanner"
 
+[features]
+default = []
+browser = ["scanner-browser"]
+
 [dependencies]
 scanner-core = { workspace = true }
 scanner-transport = { workspace = true }
@@ -13,6 +17,7 @@ scanner-tracking = { workspace = true }
 scanner-cookies = { workspace = true }
 scanner-dns = { workspace = true }
 scanner-bestpractices = { workspace = true }
+scanner-browser = { workspace = true, optional = true }
 tokio = { workspace = true }
 reqwest = { workspace = true }
 hickory-resolver = { workspace = true }

@@ -1,3 +1,4 @@
+use scanner_core::browser_types::BrowserData;
 use scanner_core::check::CheckResult;
 use scanner_core::spec::Category;
 
@@ -7,26 +8,37 @@ const CAT: Category = Category::BestPractices;
 ///
 /// Heuristic: the initial HTML response (without JS execution) should contain
 /// meaningful text content — not just a loading spinner or empty div.
-pub fn check_js_free(html: &str) -> CheckResult {
-    let meaningful = has_meaningful_content(html);
+/// When browser data is available, uses rendered HTML to confirm SPA detection.
+pub fn check_js_free(html: &str, browser_data: Option<&BrowserData>) -> CheckResult {
+    let static_meaningful = has_meaningful_content(html);
 
-    if meaningful {
-        CheckResult::pass(
+    if static_meaningful {
+        return CheckResult::pass(
             CAT,
             "accessible_without_js",
             "Accessible without JavaScript",
             1,
             None,
-        )
-    } else {
-        CheckResult::fail(
-            CAT,
-            "accessible_without_js",
-            "Accessible without JavaScript",
-            1,
-            Some("Page appears to require JavaScript for content (likely a SPA)".into()),
-        )
+        );
     }
+
+    // Static HTML lacks content — check browser data for confirmation
+    let detail = match browser_data {
+        Some(bd) if has_meaningful_content(&bd.rendered_html) => {
+            "Page requires JavaScript: static HTML has no content, \
+             but rendered page does (confirmed SPA)"
+                .into()
+        }
+        _ => "Page appears to require JavaScript for content (likely a SPA)".into(),
+    };
+
+    CheckResult::fail(
+        CAT,
+        "accessible_without_js",
+        "Accessible without JavaScript",
+        1,
+        Some(detail),
+    )
 }
 
 /// Determine if HTML contains meaningful content without JS execution.

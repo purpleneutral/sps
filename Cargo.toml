@@ -8,6 +8,7 @@ members = [
     "crates/scanner-cookies",
     "crates/scanner-dns",
     "crates/scanner-bestpractices",
+    "crates/scanner-browser",
     "crates/scanner-engine",
     "crates/scanner-server",
     "crates/scanner-cli",
@@ -75,6 +76,10 @@ tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"]
 # Rate limiting
 governor = "0.8"
 
+# Browser automation
+chromiumoxide = { version = "0.9", default-features = false, features = ["bytes"] }
+futures = "0.3"
+
 # Internal crates
 scanner-core = { path = "crates/scanner-core" }
 scanner-transport = { path = "crates/scanner-transport" }
@@ -83,5 +88,6 @@ scanner-tracking = { path = "crates/scanner-tracking" }
 scanner-cookies = { path = "crates/scanner-cookies" }
 scanner-dns = { path = "crates/scanner-dns" }
 scanner-bestpractices = { path = "crates/scanner-bestpractices" }
+scanner-browser = { path = "crates/scanner-browser" }
 scanner-engine = { path = "crates/scanner-engine" }
 scanner-server = { path = "crates/scanner-server" }

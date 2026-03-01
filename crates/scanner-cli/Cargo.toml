@@ -9,6 +9,10 @@ description = "Seglamater Privacy Scanner — evaluate any website against the S
 name = "seglamater-scan"
 path = "src/main.rs"
 
+[features]
+default = []
+browser = ["scanner-engine/browser"]
+
 [dependencies]
 scanner-core = { workspace = true }
 scanner-engine = { workspace = true }

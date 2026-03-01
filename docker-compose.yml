@@ -1,6 +1,9 @@
 services:
   scanner:
-    build: .
+    build:
+      context: .
+      args:
+        FEATURES: "${SPS_FEATURES:-}"
     ports:
       - "8080:8080"
     volumes:
@@ -10,6 +13,14 @@ services:
       - RUST_LOG=info
       - SPS_API_KEY=${SPS_API_KEY:-}
       - SPS_CORS_ORIGINS=${SPS_CORS_ORIGINS:-https://seglamater.app,https://seglamater.com}
+      - CHROME_BIN=/usr/bin/chromium
+      - SPS_MAX_BROWSER_SESSIONS=${SPS_MAX_BROWSER_SESSIONS:-2}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    security_opt:
+      - seccomp=unconfined
     restart: unless-stopped
 
 volumes:

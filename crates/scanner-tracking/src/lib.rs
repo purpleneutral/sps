@@ -3,6 +3,7 @@ pub mod fingerprint;
 pub mod parser;
 pub mod resources;
 
+use scanner_core::browser_types::BrowserData;
 use scanner_core::check::{CategoryResult, CheckResult};
 use scanner_core::spec::Category;
 
@@ -13,14 +14,55 @@ const CAT: Category = Category::TrackingThirdParties;
 /// `domain` is the first-party domain being scanned.
 /// `html` is the HTML body of the page.
 /// `page_url` is the full URL that was fetched.
-pub fn check_tracking(domain: &str, html: &str, page_url: &str) -> CategoryResult {
-    let external_resources = parser::extract_external_resources(html, page_url, domain);
+/// `browser_data` contains runtime browser observations when available.
+pub fn check_tracking(
+    domain: &str,
+    html: &str,
+    page_url: &str,
+    browser_data: Option<&BrowserData>,
+) -> CategoryResult {
+    let mut external_resources = parser::extract_external_resources(html, page_url, domain);
+
+    // Merge browser-observed network requests as additional resources
+    if let Some(bd) = browser_data {
+        for req in &bd.network_requests {
+            // Skip first-party requests and non-resource types
+            if req.domain.is_empty() || req.domain == domain {
+                continue;
+            }
+            // Only include resource types that indicate external loading
+            let element = match req.resource_type.as_str() {
+                "Script" => "script",
+                "Stylesheet" => "link",
+                "Image" => "img",
+                _ => "dynamic",
+            };
+            // Deduplicate by URL
+            if !external_resources.iter().any(|er| er.url == req.url) {
+                external_resources.push(parser::ExternalResource {
+                    url: req.url.clone(),
+                    domain: req.domain.clone(),
+                    element: element.to_string(),
+                    is_https: req.is_https,
+                });
+            }
+        }
+    }
 
     let analytics = resources::find_analytics(&external_resources);
     let trackers = resources::find_trackers(&external_resources);
     let third_party_cdns = resources::find_third_party_cdns(&external_resources, domain);
     let has_mixed_content = resources::has_mixed_content(&external_resources);
-    let fingerprinting = fingerprint::detect_fingerprinting(html);
+
+    // Run fingerprint detection on both static and rendered HTML
+    let mut fingerprinting = fingerprint::detect_fingerprinting(html);
+    if let Some(bd) = browser_data {
+        for fp in fingerprint::detect_fingerprinting(&bd.rendered_html) {
+            if !fingerprinting.contains(&fp) {
+                fingerprinting.push(fp);
+            }
+        }
+    }
 
     let mut checks = Vec::new();
 

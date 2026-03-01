@@ -1,15 +1,15 @@
 use scraper::{Html, Selector};
 use url::Url;
 
-/// An external resource found in the page HTML.
+/// An external resource found in the page HTML or observed via browser.
 #[derive(Debug, Clone)]
 pub struct ExternalResource {
     /// The full URL of the resource.
     pub url: String,
     /// The domain of the resource.
     pub domain: String,
-    /// The type of HTML element it was found in.
-    pub element: &'static str,
+    /// The type of HTML element or source (e.g., "script", "link", "img", "dynamic").
+    pub element: String,
     /// Whether the URL uses HTTPS.
     pub is_https: bool,
 }
@@ -74,7 +74,7 @@ pub fn extract_external_resources(
 fn resolve_resource(
     raw_url: &str,
     base: Option<&Url>,
-    element: &'static str,
+    element: &str,
 ) -> Option<ExternalResource> {
     let url = if raw_url.starts_with("//") {
         Url::parse(&format!("https:{raw_url}")).ok()
@@ -93,7 +93,7 @@ fn resolve_resource(
     Some(ExternalResource {
         url: url.to_string(),
         domain,
-        element,
+        element: element.to_string(),
         is_https,
     })
 }

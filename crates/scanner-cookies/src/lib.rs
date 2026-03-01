@@ -1,6 +1,7 @@
 pub mod analysis;
 
 use analysis::CookieInfo;
+use scanner_core::browser_types::BrowserData;
 use scanner_core::check::{CategoryResult, CheckResult};
 use scanner_core::spec::Category;
 
@@ -11,11 +12,33 @@ const ONE_YEAR_SECS: i64 = 365 * 24 * 60 * 60;
 ///
 /// `set_cookie_headers` are the raw Set-Cookie header values from the response.
 /// `domain` is the first-party domain being scanned.
-pub fn check_cookies(set_cookie_headers: &[String], domain: &str) -> CategoryResult {
-    let cookies: Vec<CookieInfo> = set_cookie_headers
+/// `browser_data` contains runtime browser observations when available.
+pub fn check_cookies(
+    set_cookie_headers: &[String],
+    domain: &str,
+    browser_data: Option<&BrowserData>,
+) -> CategoryResult {
+    let mut cookies: Vec<CookieInfo> = set_cookie_headers
         .iter()
         .map(|raw| analysis::parse_set_cookie(raw, domain))
         .collect();
+
+    // Merge browser-observed cookies (includes JS-set cookies)
+    if let Some(bd) = browser_data {
+        for bc in &bd.cookies {
+            if !cookies.iter().any(|c| c.name == bc.name) {
+                cookies.push(CookieInfo {
+                    name: bc.name.clone(),
+                    secure: bc.secure,
+                    http_only: bc.http_only,
+                    same_site: bc.same_site.clone(),
+                    max_age_seconds: bc.expires_seconds,
+                    domain: Some(bc.domain.clone()),
+                    is_third_party: !analysis::is_same_domain(&bc.domain, domain),
+                });
+            }
+        }
+    }
 
     let mut checks = Vec::new();
 

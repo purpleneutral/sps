@@ -3,10 +3,15 @@ pub mod validate;
 
 use anyhow::{bail, Context, Result};
 use hickory_resolver::TokioResolver;
+use scanner_core::browser_types::BrowserData;
 use scanner_core::check::CategoryResult;
 use scanner_core::score::ScanResult;
 use scanner_core::ssrf::is_private_ip;
 use std::net::{IpAddr, SocketAddr};
+#[cfg(feature = "browser")]
+use std::sync::LazyLock;
+#[cfg(feature = "browser")]
+use tokio::sync::Semaphore;
 
 pub use recommendations::generate_recommendations;
 pub use validate::validate_domain;
@@ -14,11 +19,65 @@ pub use validate::validate_domain;
 /// Maximum response body size (10 MB).
 const MAX_BODY_SIZE: usize = 10 * 1024 * 1024;
 
+/// Maximum concurrent browser sessions.
+#[cfg(feature = "browser")]
+static BROWSER_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| {
+    let max = std::env::var("SPS_MAX_BROWSER_SESSIONS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(2);
+    Semaphore::new(max)
+});
+
+/// Attempt to fetch browser data. Returns None if the browser feature is
+/// disabled or if the browser fetch fails for any reason.
+async fn fetch_browser_data(domain: &str) -> Option<BrowserData> {
+    #[cfg(feature = "browser")]
+    {
+        let permit = match BROWSER_SEMAPHORE.try_acquire() {
+            Ok(p) => p,
+            Err(_) => {
+                tracing::warn!(
+                    "Browser session limit reached, skipping browser fetch for {domain}"
+                );
+                return None;
+            }
+        };
+
+        let result = scanner_browser::fetch_with_browser(domain).await;
+        drop(permit);
+
+        match result {
+            Ok(data) => {
+                tracing::info!(
+                    "Browser fetch complete: {} requests, {} cookies, {}ms",
+                    data.network_requests.len(),
+                    data.cookies.len(),
+                    data.load_time_ms,
+                );
+                Some(data)
+            }
+            Err(e) => {
+                tracing::warn!("Browser fetch failed, using static analysis only: {e}");
+                None
+            }
+        }
+    }
+    #[cfg(not(feature = "browser"))]
+    {
+        let _ = domain;
+        None
+    }
+}
+
 /// Run a full scan against a domain and return the complete result.
 pub async fn run_scan(domain: &str) -> Result<ScanResult> {
     validate::validate_domain(domain).await?;
 
     let (headers, html, set_cookie_headers) = fetch_page(domain).await?;
+
+    // Optionally fetch browser data for enhanced detection
+    let browser_data = fetch_browser_data(domain).await;
 
     let page_url = format!("https://{domain}/");
 
@@ -30,10 +89,13 @@ pub async fn run_scan(domain: &str) -> Result<ScanResult> {
 
     // These depend on the fetched page data
     let security_headers = scanner_headers::check_headers(&headers);
-    let tracking = scanner_tracking::check_tracking(domain, &html, &page_url);
-    let cookies = scanner_cookies::check_cookies(&set_cookie_headers, domain);
+    let tracking =
+        scanner_tracking::check_tracking(domain, &html, &page_url, browser_data.as_ref());
+    let cookies =
+        scanner_cookies::check_cookies(&set_cookie_headers, domain, browser_data.as_ref());
 
-    let best_practices = scanner_bestpractices::check_best_practices(domain, &html).await;
+    let best_practices =
+        scanner_bestpractices::check_best_practices(domain, &html, browser_data.as_ref()).await;
 
     let categories: Vec<CategoryResult> = vec![
         transport,

@@ -66,7 +66,7 @@ fn parse_expires_to_seconds(lower_raw: &str) -> Option<i64> {
     Some(duration.num_seconds())
 }
 
-fn is_same_domain(cookie_domain: &str, first_party: &str) -> bool {
+pub fn is_same_domain(cookie_domain: &str, first_party: &str) -> bool {
     let cd = cookie_domain.trim_start_matches('.').to_lowercase();
     let fp = first_party.to_lowercase();
 
