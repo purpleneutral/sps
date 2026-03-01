@@ -482,10 +482,12 @@ scanner-cli            CLI interface (scan + serve subcommands)
 ## Scan Behavior
 
 - **User-Agent:** `Mozilla/5.0 (compatible; SeglamaterScan/0.1; +https://seglamater.app/privacy)`
-- **Timeout:** 30 seconds per request
+- **HTTP timeout:** 30 seconds per request
+- **Browser timeout:** 45 seconds for the headless Chromium page load (includes navigation, network idle wait, and data collection)
 - **Redirects:** Up to 10 followed
 - **TLS:** Valid certificates required (no insecure connections)
 - **Parallelism:** Transport and DNS checks run concurrently; header, tracking, cookie, and best practice checks run after the page is fetched
+- **Browser integration:** A headless Chromium instance loads the page to capture JavaScript-rendered content, runtime cookies, and network requests. DNS is pinned to the resolved IP to prevent SSRF. The browser runs in a sandboxed, no-GPU environment with a single-use profile discarded after each scan.
 
 ### Domain Normalization
 

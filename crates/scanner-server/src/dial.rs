@@ -36,3 +36,116 @@ pub fn generate_unknown_dial(size: u32) -> String {
 </svg>"##
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dial_is_valid_svg() {
+        let svg = generate_dial(Grade::A, 92, 120);
+        assert!(svg.starts_with("<svg xmlns="));
+        assert!(svg.ends_with("</svg>"));
+    }
+
+    #[test]
+    fn dial_contains_score_and_grade() {
+        let svg = generate_dial(Grade::B, 80, 120);
+        assert!(svg.contains(">80</text>"));
+        assert!(svg.contains(">B</text>"));
+    }
+
+    #[test]
+    fn dial_uses_correct_colors() {
+        let svg_a_plus = generate_dial(Grade::APlus, 97, 120);
+        assert!(svg_a_plus.contains("#22c55e"));
+
+        let svg_b = generate_dial(Grade::B, 80, 120);
+        assert!(svg_b.contains("#3b82f6"));
+
+        let svg_c = generate_dial(Grade::C, 65, 120);
+        assert!(svg_c.contains("#eab308"));
+
+        let svg_d = generate_dial(Grade::D, 45, 120);
+        assert!(svg_d.contains("#f97316"));
+
+        let svg_f = generate_dial(Grade::F, 20, 120);
+        assert!(svg_f.contains("#ef4444"));
+    }
+
+    #[test]
+    fn dial_respects_size() {
+        let svg_small = generate_dial(Grade::A, 90, 60);
+        assert!(svg_small.contains(r#"width="60""#));
+        assert!(svg_small.contains(r#"height="60""#));
+
+        let svg_large = generate_dial(Grade::A, 90, 300);
+        assert!(svg_large.contains(r#"width="300""#));
+        assert!(svg_large.contains(r#"height="300""#));
+    }
+
+    #[test]
+    fn dial_viewbox_is_constant() {
+        let svg_small = generate_dial(Grade::A, 90, 60);
+        let svg_large = generate_dial(Grade::A, 90, 300);
+        assert!(svg_small.contains(r#"viewBox="0 0 120 120""#));
+        assert!(svg_large.contains(r#"viewBox="0 0 120 120""#));
+    }
+
+    #[test]
+    fn dial_has_accessibility_attributes() {
+        let svg = generate_dial(Grade::B, 80, 120);
+        assert!(svg.contains(r#"role="img""#));
+        assert!(svg.contains(r#"aria-label="SPS Score: 80/100 (Grade B)""#));
+        assert!(svg.contains("<title>SPS Score: 80/100 (Grade B)</title>"));
+    }
+
+    #[test]
+    fn dial_arc_offset_scales_with_score() {
+        let svg_full = generate_dial(Grade::APlus, 100, 120);
+        // score=100 → offset=0
+        assert!(svg_full.contains("stroke-dashoffset=\"0\""));
+
+        let svg_zero = generate_dial(Grade::F, 0, 120);
+        // score=0 → offset=circumference
+        let expected = format!("stroke-dashoffset=\"{}\"", CIRCUMFERENCE);
+        assert!(svg_zero.contains(&expected));
+    }
+
+    #[test]
+    fn dial_a_plus_displays_correctly() {
+        let svg = generate_dial(Grade::APlus, 97, 120);
+        assert!(svg.contains(">A+</text>"));
+        assert!(svg.contains(">97</text>"));
+    }
+
+    #[test]
+    fn unknown_dial_is_valid_svg() {
+        let svg = generate_unknown_dial(120);
+        assert!(svg.starts_with("<svg xmlns="));
+        assert!(svg.ends_with("</svg>"));
+    }
+
+    #[test]
+    fn unknown_dial_shows_no_scan() {
+        let svg = generate_unknown_dial(120);
+        assert!(svg.contains(">no scan</text>"));
+        assert!(!svg.contains("stroke-dashoffset"));
+    }
+
+    #[test]
+    fn unknown_dial_respects_size() {
+        let svg = generate_unknown_dial(80);
+        assert!(svg.contains(r#"width="80""#));
+        assert!(svg.contains(r#"height="80""#));
+        assert!(svg.contains(r#"viewBox="0 0 120 120""#));
+    }
+
+    #[test]
+    fn unknown_dial_has_accessibility() {
+        let svg = generate_unknown_dial(120);
+        assert!(svg.contains(r#"role="img""#));
+        assert!(svg.contains(r#"aria-label="SPS Score: no scan data""#));
+        assert!(svg.contains("<title>SPS Score: no scan data</title>"));
+    }
+}
