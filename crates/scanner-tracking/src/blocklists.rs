@@ -116,8 +116,6 @@ pub const CDN_DOMAINS: &[&str] = &[
 /// Handles subdomain matching (e.g., "scripts.hotjar.com" matches "hotjar.com").
 pub fn domain_matches_list(domain: &str, list: &[&str]) -> bool {
     let domain_lower = domain.to_lowercase();
-    list.iter().any(|entry| {
-        domain_lower == *entry
-            || domain_lower.ends_with(&format!(".{entry}"))
-    })
+    list.iter()
+        .any(|entry| domain_lower == *entry || domain_lower.ends_with(&format!(".{entry}")))
 }

@@ -1,6 +1,6 @@
 use crate::storage::Storage;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 /// Spawn a background task that periodically checks for domains due for re-scanning.
@@ -68,9 +68,7 @@ async fn run_cycle<S: Storage + ?Sized>(storage: &S) {
                 }
 
                 if let Err(e) = storage.mark_scanned(domain).await {
-                    tracing::error!(
-                        "Scheduler: failed to mark {domain} as scanned: {e:#}"
-                    );
+                    tracing::error!("Scheduler: failed to mark {domain} as scanned: {e:#}");
                 }
 
                 tracing::info!(

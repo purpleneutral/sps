@@ -16,7 +16,10 @@ pub fn format_text(result: &ScanResult) -> String {
     .unwrap();
     writeln!(out).unwrap();
 
-    let grade_str = format!("Score: {}/100 (Grade: {})", result.total_score, result.grade);
+    let grade_str = format!(
+        "Score: {}/100 (Grade: {})",
+        result.total_score, result.grade
+    );
     let grade_str = match result.grade {
         crate::spec::Grade::APlus | crate::spec::Grade::A => grade_str.green().bold().to_string(),
         crate::spec::Grade::B => grade_str.blue().bold().to_string(),

@@ -34,11 +34,9 @@ impl PostgresStorage {
         .execute(&self.pool)
         .await?;
 
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain)",
-        )
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain)")
+            .execute(&self.pool)
+            .await?;
 
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_scans_domain_time ON scans(domain, scanned_at DESC)",
@@ -203,12 +201,10 @@ impl Storage for PostgresStorage {
     }
 
     async fn mark_scanned(&self, domain: &str) -> Result<()> {
-        sqlx::query(
-            "UPDATE registered_domains SET last_scanned_at = NOW() WHERE domain = $1",
-        )
-        .bind(domain)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE registered_domains SET last_scanned_at = NOW() WHERE domain = $1")
+            .bind(domain)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }

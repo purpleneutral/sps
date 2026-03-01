@@ -1,6 +1,6 @@
 use anyhow::Result;
-use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::Handler;
+use chromiumoxide::browser::{Browser, BrowserConfig};
 
 /// Chrome flags for a secure, sandboxed headless session.
 const CHROME_ARGS: &[&str] = &[

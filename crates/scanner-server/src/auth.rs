@@ -1,7 +1,7 @@
+use axum::Json;
 use axum::http::{Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 
 /// Constant-time string comparison to prevent timing attacks on API key.
 fn constant_time_eq(a: &str, b: &str) -> bool {
@@ -31,23 +31,20 @@ pub async fn require_api_key(req: axum::extract::Request, next: Next) -> Respons
     };
 
     // Check X-API-Key header
-    if let Some(val) = req.headers().get("x-api-key") {
-        if let Ok(provided) = val.to_str() {
-            if constant_time_eq(provided, &expected) {
-                return next.run(req).await;
-            }
-        }
+    if let Some(val) = req.headers().get("x-api-key")
+        && let Ok(provided) = val.to_str()
+        && constant_time_eq(provided, &expected)
+    {
+        return next.run(req).await;
     }
 
     // Check Authorization: Bearer header
-    if let Some(val) = req.headers().get("authorization") {
-        if let Ok(provided) = val.to_str() {
-            if let Some(token) = provided.strip_prefix("Bearer ") {
-                if constant_time_eq(token, &expected) {
-                    return next.run(req).await;
-                }
-            }
-        }
+    if let Some(val) = req.headers().get("authorization")
+        && let Ok(provided) = val.to_str()
+        && let Some(token) = provided.strip_prefix("Bearer ")
+        && constant_time_eq(token, &expected)
+    {
+        return next.run(req).await;
     }
 
     let body = serde_json::json!({"error": "Unauthorized — provide a valid API key"});

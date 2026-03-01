@@ -1,10 +1,10 @@
 use crate::badge;
 use crate::dial;
 use crate::storage::Storage;
-use axum::extract::{Path, Query, State};
-use axum::http::{header, StatusCode};
-use axum::response::{IntoResponse, Response};
 use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::{StatusCode, header};
+use axum::response::{IntoResponse, Response};
 use scanner_core::spec::Grade;
 use scanner_engine::normalize_domain;
 use serde::{Deserialize, Serialize};
@@ -191,7 +191,10 @@ pub async fn list_domains<S: Storage>(
     State(storage): State<AppState<S>>,
     Query(query): Query<ListQuery>,
 ) -> Response {
-    match storage.list_domains(clamp_limit(query.limit), clamp_offset(query.offset)).await {
+    match storage
+        .list_domains(clamp_limit(query.limit), clamp_offset(query.offset))
+        .await
+    {
         Ok(records) => {
             let summaries: Vec<serde_json::Value> = records
                 .into_iter()
@@ -252,7 +255,10 @@ pub async fn search_domains<S: Storage>(
     State(storage): State<AppState<S>>,
     Query(query): Query<SearchQuery>,
 ) -> Response {
-    match storage.search_domains(&query.q, clamp_limit(query.limit)).await {
+    match storage
+        .search_domains(&query.q, clamp_limit(query.limit))
+        .await
+    {
         Ok(records) => {
             let summaries: Vec<serde_json::Value> = records
                 .into_iter()
@@ -275,9 +281,7 @@ pub async fn search_domains<S: Storage>(
 }
 
 /// GET /api/stats — aggregate statistics.
-pub async fn get_stats<S: Storage>(
-    State(storage): State<AppState<S>>,
-) -> Response {
+pub async fn get_stats<S: Storage>(State(storage): State<AppState<S>>) -> Response {
     match storage.get_stats().await {
         Ok(stats) => (StatusCode::OK, Json(stats)).into_response(),
         Err(e) => {

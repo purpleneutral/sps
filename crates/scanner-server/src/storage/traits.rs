@@ -89,18 +89,11 @@ pub trait Storage: Send + Sync + 'static {
     ) -> impl std::future::Future<Output = Result<()>> + Send;
 
     /// Get domains that are due for a re-scan.
-    fn get_due_domains(
-        &self,
-    ) -> impl std::future::Future<Output = Result<Vec<String>>> + Send;
+    fn get_due_domains(&self) -> impl std::future::Future<Output = Result<Vec<String>>> + Send;
 
     /// Update the last_scanned_at timestamp for a registered domain.
-    fn mark_scanned(
-        &self,
-        domain: &str,
-    ) -> impl std::future::Future<Output = Result<()>> + Send;
+    fn mark_scanned(&self, domain: &str) -> impl std::future::Future<Output = Result<()>> + Send;
 
     /// Get aggregate statistics.
-    fn get_stats(
-        &self,
-    ) -> impl std::future::Future<Output = Result<AggregateStats>> + Send;
+    fn get_stats(&self) -> impl std::future::Future<Output = Result<AggregateStats>> + Send;
 }

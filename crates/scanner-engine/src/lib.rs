@@ -1,7 +1,7 @@
 mod recommendations;
 pub mod validate;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use hickory_resolver::TokioResolver;
 use scanner_core::browser_types::BrowserData;
 use scanner_core::check::CategoryResult;
@@ -116,9 +116,7 @@ pub async fn run_scan(domain: &str) -> Result<ScanResult> {
 }
 
 /// Fetch the page and extract headers, HTML body, and Set-Cookie headers.
-pub async fn fetch_page(
-    domain: &str,
-) -> Result<(reqwest::header::HeaderMap, String, Vec<String>)> {
+pub async fn fetch_page(domain: &str) -> Result<(reqwest::header::HeaderMap, String, Vec<String>)> {
     // Resolve DNS and pin to prevent rebinding attacks
     let resolver = TokioResolver::builder_tokio()
         .map_err(|_| anyhow::anyhow!("Failed to create DNS resolver"))?
@@ -157,9 +155,7 @@ pub async fn fetch_page(
             }
         }))
         .timeout(std::time::Duration::from_secs(30))
-        .user_agent(
-            "Mozilla/5.0 (compatible; SeglamaterScan/0.1; +https://seglamater.app/privacy)",
-        )
+        .user_agent("Mozilla/5.0 (compatible; SeglamaterScan/0.1; +https://seglamater.app/privacy)")
         .build()
         .context("Failed to build HTTP client")?;
 
@@ -181,16 +177,13 @@ pub async fn fetch_page(
         .collect();
 
     // Enforce body size limit
-    if let Some(len) = resp.content_length() {
-        if len > MAX_BODY_SIZE as u64 {
-            bail!("Response body too large");
-        }
+    if let Some(len) = resp.content_length()
+        && len > MAX_BODY_SIZE as u64
+    {
+        bail!("Response body too large");
     }
 
-    let bytes = resp
-        .bytes()
-        .await
-        .context("Failed to read response body")?;
+    let bytes = resp.bytes().await.context("Failed to read response body")?;
 
     if bytes.len() > MAX_BODY_SIZE {
         bail!("Response body too large");

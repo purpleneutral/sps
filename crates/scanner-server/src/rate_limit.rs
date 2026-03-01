@@ -1,8 +1,8 @@
+use axum::Json;
 use axum::extract::Extension;
 use axum::http::{Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use governor::clock::DefaultClock;
 use governor::state::keyed::DashMapStateStore;
 use governor::{Quota, RateLimiter};
@@ -16,6 +16,12 @@ type KeyedLimiter = RateLimiter<IpAddr, DashMapStateStore<IpAddr>, DefaultClock>
 pub struct RateLimitState {
     pub(crate) write_limiter: Arc<KeyedLimiter>,
     pub(crate) read_limiter: Arc<KeyedLimiter>,
+}
+
+impl Default for RateLimitState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RateLimitState {
@@ -49,14 +55,12 @@ pub fn spawn_cleanup(state: &RateLimitState) {
 fn extract_client_ip(req: &axum::extract::Request) -> IpAddr {
     // Try X-Forwarded-For (behind reverse proxy like Traefik/Caddy).
     // Use the last (rightmost) IP — that's the one appended by the trusted proxy.
-    if let Some(forwarded) = req.headers().get("x-forwarded-for") {
-        if let Ok(val) = forwarded.to_str() {
-            if let Some(last) = val.rsplit(',').next() {
-                if let Ok(ip) = last.trim().parse::<IpAddr>() {
-                    return ip;
-                }
-            }
-        }
+    if let Some(forwarded) = req.headers().get("x-forwarded-for")
+        && let Ok(val) = forwarded.to_str()
+        && let Some(last) = val.rsplit(',').next()
+        && let Ok(ip) = last.trim().parse::<IpAddr>()
+    {
+        return ip;
     }
 
     // Fall back to peer address from ConnectInfo

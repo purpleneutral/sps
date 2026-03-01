@@ -12,39 +12,39 @@ pub async fn check_dmarc(domain: &str, resolver: &TokioResolver) -> CheckResult 
         Ok(response) => {
             for record in response.iter() {
                 let txt = record.to_string();
-                if txt.starts_with("v=DMARC1") {
-                    if let Some(policy) = extract_policy(&txt) {
-                        match policy.as_str() {
-                            "reject" | "quarantine" => {
-                                return CheckResult::pass(
-                                    CAT,
-                                    "dmarc_policy",
-                                    "DMARC policy set to quarantine or reject",
-                                    3,
-                                    Some(format!("p={policy}")),
-                                );
-                            }
-                            "none" => {
-                                return CheckResult::fail(
-                                    CAT,
-                                    "dmarc_policy",
-                                    "DMARC policy set to quarantine or reject",
-                                    3,
-                                    Some(
-                                        "DMARC policy is \"none\" (should be \"quarantine\" or \"reject\")"
-                                            .into(),
-                                    ),
-                                );
-                            }
-                            other => {
-                                return CheckResult::fail(
-                                    CAT,
-                                    "dmarc_policy",
-                                    "DMARC policy set to quarantine or reject",
-                                    3,
-                                    Some(format!("Unknown DMARC policy: \"{other}\"")),
-                                );
-                            }
+                if txt.starts_with("v=DMARC1")
+                    && let Some(policy) = extract_policy(&txt)
+                {
+                    match policy.as_str() {
+                        "reject" | "quarantine" => {
+                            return CheckResult::pass(
+                                CAT,
+                                "dmarc_policy",
+                                "DMARC policy set to quarantine or reject",
+                                3,
+                                Some(format!("p={policy}")),
+                            );
+                        }
+                        "none" => {
+                            return CheckResult::fail(
+                                CAT,
+                                "dmarc_policy",
+                                "DMARC policy set to quarantine or reject",
+                                3,
+                                Some(
+                                    "DMARC policy is \"none\" (should be \"quarantine\" or \"reject\")"
+                                        .into(),
+                                ),
+                            );
+                        }
+                        other => {
+                            return CheckResult::fail(
+                                CAT,
+                                "dmarc_policy",
+                                "DMARC policy set to quarantine or reject",
+                                3,
+                                Some(format!("Unknown DMARC policy: \"{other}\"")),
+                            );
                         }
                     }
                 }

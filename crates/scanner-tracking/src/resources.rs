@@ -6,10 +6,10 @@ use crate::parser::ExternalResource;
 pub fn find_analytics(resources: &[ExternalResource]) -> Vec<String> {
     let mut found = Vec::new();
     for r in resources {
-        if blocklists::domain_matches_list(&r.domain, blocklists::ANALYTICS_DOMAINS) {
-            if !found.contains(&r.domain) {
-                found.push(r.domain.clone());
-            }
+        if blocklists::domain_matches_list(&r.domain, blocklists::ANALYTICS_DOMAINS)
+            && !found.contains(&r.domain)
+        {
+            found.push(r.domain.clone());
         }
     }
     found
@@ -20,10 +20,10 @@ pub fn find_analytics(resources: &[ExternalResource]) -> Vec<String> {
 pub fn find_trackers(resources: &[ExternalResource]) -> Vec<String> {
     let mut found = Vec::new();
     for r in resources {
-        if blocklists::domain_matches_list(&r.domain, blocklists::TRACKER_DOMAINS) {
-            if !found.contains(&r.domain) {
-                found.push(r.domain.clone());
-            }
+        if blocklists::domain_matches_list(&r.domain, blocklists::TRACKER_DOMAINS)
+            && !found.contains(&r.domain)
+        {
+            found.push(r.domain.clone());
         }
     }
     found
@@ -36,10 +36,9 @@ pub fn find_third_party_cdns(resources: &[ExternalResource], first_party: &str) 
     for r in resources {
         if is_third_party(&r.domain, first_party)
             && blocklists::domain_matches_list(&r.domain, CDN_DOMAINS)
+            && !found.contains(&r.domain)
         {
-            if !found.contains(&r.domain) {
-                found.push(r.domain.clone());
-            }
+            found.push(r.domain.clone());
         }
     }
     found

@@ -27,10 +27,10 @@ pub fn extract_external_resources(
     // <script src="...">
     if let Ok(sel) = Selector::parse("script[src]") {
         for el in document.select(&sel) {
-            if let Some(src) = el.value().attr("src") {
-                if let Some(r) = resolve_resource(src, base_url.as_ref(), "script") {
-                    resources.push(r);
-                }
+            if let Some(src) = el.value().attr("src")
+                && let Some(r) = resolve_resource(src, base_url.as_ref(), "script")
+            {
+                resources.push(r);
             }
         }
     }
@@ -38,10 +38,10 @@ pub fn extract_external_resources(
     // <link href="..."> (stylesheets, fonts, etc.)
     if let Ok(sel) = Selector::parse("link[href]") {
         for el in document.select(&sel) {
-            if let Some(href) = el.value().attr("href") {
-                if let Some(r) = resolve_resource(href, base_url.as_ref(), "link") {
-                    resources.push(r);
-                }
+            if let Some(href) = el.value().attr("href")
+                && let Some(r) = resolve_resource(href, base_url.as_ref(), "link")
+            {
+                resources.push(r);
             }
         }
     }
@@ -49,10 +49,10 @@ pub fn extract_external_resources(
     // <img src="...">
     if let Ok(sel) = Selector::parse("img[src]") {
         for el in document.select(&sel) {
-            if let Some(src) = el.value().attr("src") {
-                if let Some(r) = resolve_resource(src, base_url.as_ref(), "img") {
-                    resources.push(r);
-                }
+            if let Some(src) = el.value().attr("src")
+                && let Some(r) = resolve_resource(src, base_url.as_ref(), "img")
+            {
+                resources.push(r);
             }
         }
     }
@@ -60,10 +60,10 @@ pub fn extract_external_resources(
     // <iframe src="...">
     if let Ok(sel) = Selector::parse("iframe[src]") {
         for el in document.select(&sel) {
-            if let Some(src) = el.value().attr("src") {
-                if let Some(r) = resolve_resource(src, base_url.as_ref(), "iframe") {
-                    resources.push(r);
-                }
+            if let Some(src) = el.value().attr("src")
+                && let Some(r) = resolve_resource(src, base_url.as_ref(), "iframe")
+            {
+                resources.push(r);
             }
         }
     }
@@ -71,11 +71,7 @@ pub fn extract_external_resources(
     resources
 }
 
-fn resolve_resource(
-    raw_url: &str,
-    base: Option<&Url>,
-    element: &str,
-) -> Option<ExternalResource> {
+fn resolve_resource(raw_url: &str, base: Option<&Url>, element: &str) -> Option<ExternalResource> {
     let url = if raw_url.starts_with("//") {
         Url::parse(&format!("https:{raw_url}")).ok()
     } else if raw_url.starts_with("http://") || raw_url.starts_with("https://") {

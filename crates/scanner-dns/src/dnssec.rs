@@ -19,7 +19,10 @@ pub async fn check_dnssec(domain: &str, resolver: &TokioResolver) -> CheckResult
     // For now, we try a simple heuristic: query for the domain and check if
     // we get any response that indicates DNSSEC signing.
 
-    match resolver.lookup(domain, hickory_proto::rr::RecordType::DNSKEY).await {
+    match resolver
+        .lookup(domain, hickory_proto::rr::RecordType::DNSKEY)
+        .await
+    {
         Ok(response) => {
             if response.iter().next().is_some() {
                 CheckResult::pass(

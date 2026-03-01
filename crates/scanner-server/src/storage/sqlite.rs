@@ -39,11 +39,9 @@ impl SqliteStorage {
         .execute(&self.pool)
         .await?;
 
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain)",
-        )
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain)")
+            .execute(&self.pool)
+            .await?;
 
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_scans_domain_time ON scans(domain, scanned_at DESC)",
@@ -74,15 +72,14 @@ impl Storage for SqliteStorage {
         grade: &str,
         scan_data: &str,
     ) -> Result<i64> {
-        let result = sqlx::query(
-            "INSERT INTO scans (domain, score, grade, scan_data) VALUES (?, ?, ?, ?)",
-        )
-        .bind(domain)
-        .bind(score as i64)
-        .bind(grade)
-        .bind(scan_data)
-        .execute(&self.pool)
-        .await?;
+        let result =
+            sqlx::query("INSERT INTO scans (domain, score, grade, scan_data) VALUES (?, ?, ?, ?)")
+                .bind(domain)
+                .bind(score as i64)
+                .bind(grade)
+                .bind(scan_data)
+                .execute(&self.pool)
+                .await?;
 
         Ok(result.last_insert_rowid())
     }

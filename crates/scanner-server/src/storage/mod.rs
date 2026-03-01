@@ -29,7 +29,13 @@ pub enum AnyStorage {
 }
 
 impl Storage for AnyStorage {
-    async fn store_scan(&self, domain: &str, score: u32, grade: &str, scan_data: &str) -> Result<i64> {
+    async fn store_scan(
+        &self,
+        domain: &str,
+        score: u32,
+        grade: &str,
+        scan_data: &str,
+    ) -> Result<i64> {
         match self {
             #[cfg(feature = "sqlite")]
             AnyStorage::Sqlite(s) => s.store_scan(domain, score, grade, scan_data).await,
@@ -126,9 +132,7 @@ pub async fn connect(database_url: &str) -> Result<AnyStorage> {
         {
             anyhow::bail!("SQLite support not compiled in. Build with --features sqlite");
         }
-    } else if database_url.starts_with("postgres://")
-        || database_url.starts_with("postgresql://")
-    {
+    } else if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
         #[cfg(feature = "postgres")]
         {
             let s = PostgresStorage::connect(database_url).await?;

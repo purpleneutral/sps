@@ -1,8 +1,8 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
+use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::network::{
     EventRequestWillBeSent, EventResponseReceived,
 };
-use chromiumoxide::Page;
 use futures::StreamExt;
 use scanner_core::browser_types::NetworkRequest;
 use scanner_core::ssrf::is_private_ip;

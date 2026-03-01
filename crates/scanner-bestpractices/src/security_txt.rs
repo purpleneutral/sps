@@ -60,10 +60,7 @@ pub async fn check_security_txt(domain: &str) -> CheckResult {
                     "security_txt",
                     "security.txt present",
                     2,
-                    Some(format!(
-                        "Present but with issues: {}",
-                        issues.join("; ")
-                    )),
+                    Some(format!("Present but with issues: {}", issues.join("; "))),
                 )
             }
         }

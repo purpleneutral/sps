@@ -13,9 +13,7 @@ const ACCEPTABLE_POLICIES: &[&str] = &[
 
 /// Check Referrer-Policy header.
 pub fn check_referrer_policy(headers: &HeaderMap) -> CheckResult {
-    let value = headers
-        .get("referrer-policy")
-        .and_then(|v| v.to_str().ok());
+    let value = headers.get("referrer-policy").and_then(|v| v.to_str().ok());
 
     match value {
         Some(policy) => {
@@ -24,8 +22,7 @@ pub fn check_referrer_policy(headers: &HeaderMap) -> CheckResult {
             let effective = policy_lower
                 .split(',')
                 .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .last()
+                .rfind(|s| !s.is_empty())
                 .unwrap_or("");
 
             if ACCEPTABLE_POLICIES.contains(&effective) {

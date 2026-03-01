@@ -33,11 +33,7 @@ const PATTERNS: &[FingerprintPattern] = &[
 static COMPILED_PATTERNS: LazyLock<Vec<(&'static str, Regex)>> = LazyLock::new(|| {
     PATTERNS
         .iter()
-        .filter_map(|p| {
-            Regex::new(p.pattern)
-                .ok()
-                .map(|re| (p.name, re))
-        })
+        .filter_map(|p| Regex::new(p.pattern).ok().map(|re| (p.name, re)))
         .collect()
 });
 

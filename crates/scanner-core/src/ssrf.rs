@@ -12,14 +12,14 @@ pub fn is_private_ip(ip: &IpAddr) -> bool {
             || v4.is_unspecified()          // 0.0.0.0
             || is_cgnat(v4)                 // 100.64.0.0/10
             || is_benchmarking(v4)          // 198.18.0.0/15
-            || is_documentation(v4)         // 192.0.2/24, 198.51.100/24, 203.0.113/24
+            || is_documentation(v4) // 192.0.2/24, 198.51.100/24, 203.0.113/24
         }
         IpAddr::V6(v6) => {
             v6.is_loopback()                // ::1
             || v6.is_unspecified()          // ::
             || is_v6_link_local(v6)         // fe80::/10
             || is_v6_unique_local(v6)       // fc00::/7
-            || is_v4_mapped_private(v6)     // ::ffff:private
+            || is_v4_mapped_private(v6) // ::ffff:private
         }
     }
 }
@@ -38,7 +38,7 @@ fn is_documentation(v4: &Ipv4Addr) -> bool {
     let o = v4.octets();
     (o[0] == 192 && o[1] == 0 && o[2] == 2)       // 192.0.2.0/24 (TEST-NET-1)
     || (o[0] == 198 && o[1] == 51 && o[2] == 100)  // 198.51.100.0/24 (TEST-NET-2)
-    || (o[0] == 203 && o[1] == 0 && o[2] == 113)   // 203.0.113.0/24 (TEST-NET-3)
+    || (o[0] == 203 && o[1] == 0 && o[2] == 113) // 203.0.113.0/24 (TEST-NET-3)
 }
 
 fn is_v6_link_local(v6: &std::net::Ipv6Addr) -> bool {
