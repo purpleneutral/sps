@@ -108,7 +108,7 @@ mod tests {
 
         let svg_zero = generate_dial(Grade::F, 0, 120);
         // score=0 → offset=circumference
-        let expected = format!("stroke-dashoffset=\"{}\"", CIRCUMFERENCE);
+        let expected = format!("stroke-dashoffset=\"{CIRCUMFERENCE}\"");
         assert!(svg_zero.contains(&expected));
     }
 
