@@ -299,19 +299,24 @@ pub async fn badge_svg<S: Storage>(
     let domain = filename.strip_suffix(".svg").unwrap_or(&filename);
     let domain = normalize_domain(domain);
 
-    let svg = match storage.get_latest_scan(&domain).await {
+    let (svg, etag) = match storage.get_latest_scan(&domain).await {
         Ok(Some(record)) => {
             let grade = Grade::from_score(record.score);
-            badge::generate_badge(grade, record.score)
+            let tag = format!("\"badge-{}-{grade}\"", record.score);
+            (badge::generate_badge(grade, record.score), tag)
         }
-        _ => badge::generate_unknown_badge(),
+        _ => (badge::generate_unknown_badge(), "\"badge-unknown\"".into()),
     };
 
     (
         StatusCode::OK,
         [
             (header::CONTENT_TYPE, "image/svg+xml"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
+            (
+                header::CACHE_CONTROL,
+                "public, max-age=300, stale-while-revalidate=3600",
+            ),
+            (header::ETAG, &etag),
         ],
         svg,
     )
@@ -328,19 +333,27 @@ pub async fn dial_svg<S: Storage>(
     let domain = normalize_domain(domain);
     let size = query.size.clamp(60, 300);
 
-    let svg = match storage.get_latest_scan(&domain).await {
+    let (svg, etag) = match storage.get_latest_scan(&domain).await {
         Ok(Some(record)) => {
             let grade = Grade::from_score(record.score);
-            dial::generate_dial(grade, record.score, size)
+            let tag = format!("\"dial-{}-{grade}-{size}\"", record.score);
+            (dial::generate_dial(grade, record.score, size), tag)
         }
-        _ => dial::generate_unknown_dial(size),
+        _ => (
+            dial::generate_unknown_dial(size),
+            format!("\"dial-unknown-{size}\""),
+        ),
     };
 
     (
         StatusCode::OK,
         [
             (header::CONTENT_TYPE, "image/svg+xml"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
+            (
+                header::CACHE_CONTROL,
+                "public, max-age=300, stale-while-revalidate=3600",
+            ),
+            (header::ETAG, &etag),
         ],
         svg,
     )
