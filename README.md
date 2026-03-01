@@ -137,6 +137,34 @@ DATABASE_URL="postgres://user:pass@db:5432/scanner" seglamater-scan serve
 
 All endpoints are available when running `seglamater-scan serve`.
 
+### Authentication
+
+Write endpoints (`POST`, `PUT`, `DELETE`) require an API key when `SPS_API_KEY` is set. If the variable is unset or empty, the server runs in open mode and all requests pass through.
+
+Provide the key via either header:
+
+```
+X-API-Key: <your-key>
+Authorization: Bearer <your-key>
+```
+
+Read endpoints (`GET`) are always public and never require authentication.
+
+**Response (401):** `{ "error": "Unauthorized — provide a valid API key" }`
+
+### Rate Limiting
+
+All endpoints are rate-limited per client IP:
+
+| Request type | Limit |
+|-------------|-------|
+| Write (`POST`/`PUT`/`DELETE`) | 5 requests/minute |
+| Read (`GET`) | 60 requests/minute |
+
+When behind a reverse proxy (Traefik, Caddy, nginx), the client IP is extracted from the `X-Forwarded-For` header.
+
+**Response (429):** `{ "error": "Too many requests — please try again later" }`
+
 ### POST /api/scan
 
 Trigger a scan, store the result, and return it.
@@ -390,29 +418,38 @@ docker build -t seglamater-scan .
 docker run -p 8080:8080 -v scanner-data:/data seglamater-scan
 ```
 
+### With headless browser
+
+The `browser` feature enables headless Chromium for JavaScript-rendered page analysis. Pass it via the `FEATURES` build arg — the Dockerfile automatically installs Chromium and its dependencies in the runtime image when this feature is active.
+
+```bash
+docker build --build-arg FEATURES=browser -t seglamater-scan .
+docker run -p 8080:8080 -v scanner-data:/data \
+  --security-opt seccomp=unconfined \
+  seglamater-scan
+```
+
+The `seccomp=unconfined` flag is required for Chromium's sandbox inside Docker. The container runs as a non-root `scanner` user.
+
 ### docker-compose
 
 ```bash
 docker compose up -d
 ```
 
-The default `docker-compose.yml` runs the server on port 8080 with a SQLite database persisted to a Docker volume.
+The default `docker-compose.yml` runs the server on port 8080 with a SQLite database persisted to a Docker volume. Set `SPS_FEATURES=browser` in your environment to enable headless browser support.
 
 ### With PostgreSQL
 
-Set `DATABASE_URL` and build with the `postgres` feature. Modify the Dockerfile build line:
-
-```dockerfile
-RUN find crates -name "*.rs" -exec touch {} + && \
-    cargo build --release --features postgres --no-default-features
-```
-
-Then in `docker-compose.yml`:
+Set `DATABASE_URL` and build with the `postgres` feature:
 
 ```yaml
 services:
   scanner:
-    build: .
+    build:
+      context: .
+      args:
+        FEATURES: "postgres"
     ports:
       - "8080:8080"
     environment:
@@ -442,6 +479,8 @@ volumes:
 | `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | `info` |
 | `SPS_API_KEY` | API key for write endpoints (unset = open mode) | *(unset)* |
 | `SPS_CORS_ORIGINS` | Comma-separated allowed origins | `https://seglamater.app,https://seglamater.com` |
+| `CHROME_BIN` | Path to Chromium binary (browser feature) | `/usr/bin/chromium` |
+| `SPS_MAX_BROWSER_SESSIONS` | Max concurrent headless browser sessions | `2` |
 
 ## Background Scheduler
 
