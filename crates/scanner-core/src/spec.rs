@@ -116,6 +116,17 @@ impl Grade {
             Grade::F => "#e05d44",
         }
     }
+
+    /// Hex color for dial SVG rendering (matches KB frontend palette).
+    pub fn dial_color_hex(self) -> &'static str {
+        match self {
+            Grade::APlus | Grade::A => "#22c55e",
+            Grade::B => "#3b82f6",
+            Grade::C => "#eab308",
+            Grade::D => "#f97316",
+            Grade::F => "#ef4444",
+        }
+    }
 }
 
 impl fmt::Display for Grade {

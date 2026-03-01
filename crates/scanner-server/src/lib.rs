@@ -1,6 +1,7 @@
 pub mod api;
 pub mod auth;
 pub mod badge;
+pub mod dial;
 pub mod rate_limit;
 pub mod scheduler;
 pub mod storage;
@@ -102,8 +103,9 @@ fn build_router(storage: Arc<AnyStorage>) -> Router {
         )
         // Statistics
         .route("/api/stats", get(api::get_stats::<AnyStorage>))
-        // Badge
+        // Badge & Dial
         .route("/badge/{filename}", get(api::badge_svg::<AnyStorage>))
+        .route("/dial/{filename}", get(api::dial_svg::<AnyStorage>))
         // Auth gate on write endpoints (POST/PUT/DELETE only; reads pass through)
         .layer(middleware::from_fn(auth::require_api_key))
         // Per-IP rate limiting (write = 5/min, read = 60/min)

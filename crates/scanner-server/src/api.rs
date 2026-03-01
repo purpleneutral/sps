@@ -1,4 +1,5 @@
 use crate::badge;
+use crate::dial;
 use crate::storage::Storage;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
@@ -52,6 +53,16 @@ pub struct SearchQuery {
 pub struct HistoryQuery {
     #[serde(default = "default_limit")]
     pub limit: i64,
+}
+
+#[derive(Deserialize)]
+pub struct DialQuery {
+    #[serde(default = "default_dial_size")]
+    pub size: u32,
+}
+
+fn default_dial_size() -> u32 {
+    120
 }
 
 #[derive(Serialize)]
@@ -290,6 +301,35 @@ pub async fn badge_svg<S: Storage>(
             badge::generate_badge(grade, record.score)
         }
         _ => badge::generate_unknown_badge(),
+    };
+
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "image/svg+xml"),
+            (header::CACHE_CONTROL, "public, max-age=3600"),
+        ],
+        svg,
+    )
+        .into_response()
+}
+
+/// GET /dial/:domain.svg?size=120 — circular score dial SVG.
+pub async fn dial_svg<S: Storage>(
+    State(storage): State<AppState<S>>,
+    Path(filename): Path<String>,
+    Query(query): Query<DialQuery>,
+) -> Response {
+    let domain = filename.strip_suffix(".svg").unwrap_or(&filename);
+    let domain = normalize_domain(domain);
+    let size = query.size.clamp(60, 300);
+
+    let svg = match storage.get_latest_scan(&domain).await {
+        Ok(Some(record)) => {
+            let grade = Grade::from_score(record.score);
+            dial::generate_dial(grade, record.score, size)
+        }
+        _ => dial::generate_unknown_dial(size),
     };
 
     (
