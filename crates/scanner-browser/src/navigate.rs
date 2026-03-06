@@ -8,8 +8,12 @@ use scanner_core::browser_types::NetworkRequest;
 use scanner_core::ssrf::is_private_ip;
 use std::net::IpAddr;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 use url::Url;
+
+/// Timeout for DNS resolution to prevent indefinite hangs.
+const DNS_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub type NetworkLog = Arc<Mutex<Vec<NetworkRequest>>>;
 
@@ -20,9 +24,9 @@ pub async fn validate_target(domain: &str) -> Result<String> {
         .map_err(|_| anyhow::anyhow!("Failed to create DNS resolver"))?
         .build();
 
-    let ips: Vec<IpAddr> = resolver
-        .lookup_ip(domain)
+    let ips: Vec<IpAddr> = tokio::time::timeout(DNS_TIMEOUT, resolver.lookup_ip(domain))
         .await
+        .map_err(|_| anyhow::anyhow!("DNS resolution timed out for {domain}"))?
         .map_err(|_| anyhow::anyhow!("DNS resolution failed for {domain}"))?
         .iter()
         .collect();

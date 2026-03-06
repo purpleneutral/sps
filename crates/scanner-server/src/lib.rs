@@ -15,14 +15,87 @@ use axum::middleware;
 use axum::response::Response;
 use axum::routing::{get, post};
 use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::Arc;
+use std::time::SystemTime;
 use storage::AnyStorage;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
+/// Maximum age (in days) before a blocklist file triggers a staleness warning.
+const BLOCKLIST_MAX_AGE_DAYS: u64 = 14;
+
+/// Check blocklist files for staleness and log warnings at startup.
+fn check_blocklist_staleness() {
+    let dir = std::env::var("SPS_BLOCKLIST_DIR").unwrap_or_else(|_| "./blocklists".to_string());
+    let blocklist_dir = Path::new(&dir);
+
+    if !blocklist_dir.is_dir() {
+        tracing::debug!("Blocklist directory not found at {dir}, skipping staleness check");
+        return;
+    }
+
+    let entries = match std::fs::read_dir(blocklist_dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            tracing::warn!("Failed to read blocklist directory {dir}: {e}");
+            return;
+        }
+    };
+
+    let now = SystemTime::now();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+
+        // Only check actual blocklist data files (skip scripts, gitkeep, etc.)
+        let is_blocklist_file = path
+            .extension()
+            .is_some_and(|ext| ext == "txt" || ext == "json");
+        if !is_blocklist_file {
+            continue;
+        }
+
+        let metadata = match std::fs::metadata(&path) {
+            Ok(m) => m,
+            Err(e) => {
+                tracing::warn!("Failed to read metadata for {}: {e}", path.display());
+                continue;
+            }
+        };
+
+        let modified = match metadata.modified() {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to read modification time for {}: {e}",
+                    path.display()
+                );
+                continue;
+            }
+        };
+
+        if let Ok(age) = now.duration_since(modified) {
+            let age_days = age.as_secs() / 86400;
+            if age_days > BLOCKLIST_MAX_AGE_DAYS {
+                let name = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| path.display().to_string());
+                tracing::warn!(
+                    "Blocklist file {name} is {age_days} days old, consider updating"
+                );
+            }
+        }
+    }
+}
+
 /// Start the scanner API server.
 pub async fn run_server(host: &str, port: u16, database_url: &str) -> Result<()> {
+    // Warn about stale blocklist files before anything else
+    check_blocklist_staleness();
+
     let storage = storage::connect(database_url).await?;
     let storage = Arc::new(storage);
 
@@ -108,7 +181,7 @@ fn build_router(storage: Arc<AnyStorage>) -> Router {
         .route("/dial/{filename}", get(api::dial_svg::<AnyStorage>))
         // Auth gate on write endpoints (POST/PUT/DELETE only; reads pass through)
         .layer(middleware::from_fn(auth::require_api_key))
-        // Per-IP rate limiting (write = 5/min, read = 60/min)
+        // Per-IP rate limiting (write = 2/min unauth, 5/min auth; read = 60/min)
         .layer(middleware::from_fn(rate_limit::rate_limit_middleware))
         .layer(Extension(rate_limit_state))
         // Security response headers

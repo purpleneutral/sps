@@ -1,9 +1,13 @@
 use anyhow::{Result, bail};
 use hickory_resolver::TokioResolver;
 use std::net::IpAddr;
+use std::time::Duration;
 
 // Re-export from scanner-core for backward compatibility
 pub use scanner_core::ssrf::is_private_ip;
+
+/// Timeout for DNS resolution to prevent indefinite hangs.
+const DNS_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Cloud metadata and internal hostnames that must never be scanned.
 const BLOCKED_HOSTNAMES: &[&str] = &[
@@ -82,9 +86,9 @@ async fn validate_resolved_ips(domain: &str) -> Result<()> {
         .map_err(|_| anyhow::anyhow!("Failed to create DNS resolver"))?
         .build();
 
-    let ips: Vec<IpAddr> = resolver
-        .lookup_ip(domain)
+    let ips: Vec<IpAddr> = tokio::time::timeout(DNS_TIMEOUT, resolver.lookup_ip(domain))
         .await
+        .map_err(|_| anyhow::anyhow!("DNS resolution timed out for domain"))?
         .map_err(|_| anyhow::anyhow!("DNS resolution failed for domain"))?
         .iter()
         .collect();

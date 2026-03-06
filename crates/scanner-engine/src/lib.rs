@@ -10,8 +10,12 @@ use scanner_core::ssrf::is_private_ip;
 use std::net::{IpAddr, SocketAddr};
 #[cfg(feature = "browser")]
 use std::sync::LazyLock;
+use std::time::Duration;
 #[cfg(feature = "browser")]
 use tokio::sync::Semaphore;
+
+/// Timeout for DNS resolution to prevent indefinite hangs.
+const DNS_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub use recommendations::generate_recommendations;
 pub use validate::validate_domain;
@@ -122,9 +126,9 @@ pub async fn fetch_page(domain: &str) -> Result<(reqwest::header::HeaderMap, Str
         .map_err(|_| anyhow::anyhow!("Failed to create DNS resolver"))?
         .build();
 
-    let ips: Vec<IpAddr> = resolver
-        .lookup_ip(domain)
+    let ips: Vec<IpAddr> = tokio::time::timeout(DNS_TIMEOUT, resolver.lookup_ip(domain))
         .await
+        .map_err(|_| anyhow::anyhow!("DNS resolution timed out for {domain}"))?
         .context(format!("DNS resolution failed for {domain}"))?
         .iter()
         .collect();
